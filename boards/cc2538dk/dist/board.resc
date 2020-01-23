@@ -1,31 +1,35 @@
-mach create
-using sysbus
-machine LoadPlatformDescription @platforms/cpus/cc2538.repl
-machine SetClockSource cpu
+path add $CWD
+emulation CreateWirelessMedium "wireless"
 
-machine PyDevFromFile @scripts/pydev/rolling-bit.py 0x400D2004 0x4 True "sysctrl"
+# The radio is using a range-based medium (with the `Range` set to `11`)
+# If not set, the default SimpleMediumFunction will be used (where range is not relevant)
+wireless SetRangeWirelessFunction 11
 
-# show the UART output
-showAnalyzer uart0
-
-# get an id value starting with 1
-$id = `next_value 1`
-
-macro reset
-"""
-    # set node address based on the $id variable. 0x00 0x12 0x4B is TI OUI
-    sysbus WriteByte 0x00280028 $id
-    sysbus WriteByte 0x0028002C 0x00
-    sysbus WriteByte 0x00280030 0xAB
-    sysbus WriteByte 0x00280034 0x89
-    sysbus WriteByte 0x00280038 0x00
-    sysbus WriteByte 0x0028003C 0x4B
-    sysbus WriteByte 0x00280040 0x12
-    sysbus WriteByte 0x00280044 0x00
-    sysbus LoadBinary @http://antmicro.com/projects/renode/cc2538_rom_dump.bin-s_524288-0c196cdc21b5397f82e0ff42b206d1cc4b6d7522 0x0
-    sysbus LoadELF $image_file
-    cpu VectorTableOffset 0x200000
-"""
-
-runMacro $reset
+######################### Machine 0 - begin #########################
+$name="anode"
+$bin=@radio-firmware.cc2538dk
+i $ORIGIN/radio-firmware.resc
+wireless SetPosition radio 0 0 0
+showAnalyzer sysbus.uart0
+mach clear
 start
+########################## Machine 0 - end ##########################
+
+######################### Machine 1 - begin #########################
+#$name="cathode"
+#$bin=@radio-firmware-recv.cc2538dk
+#i $ORIGIN/radio-firmware.resc
+#wireless SetPosition radio 10 0 0
+#showAnalyzer sysbus.uart0
+#mach clear
+########################## Machine 1 - end ##########################
+
+######################### Machine 2 - begin #########################
+#$name="vcc"
+#$bin=@radio-firmware-recv.cc2538dk
+#i $ORIGIN/radio-firmware.resc
+#wireless SetPosition radio 20 0 0
+#showAnalyzer sysbus.uart0
+#mach clear
+#start
+########################## Machine 2 - end ##########################

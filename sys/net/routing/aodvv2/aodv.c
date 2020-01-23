@@ -21,7 +21,7 @@
 
 #include "aodv.h"
 #include "aodvv2/aodvv2.h"
-//#include "aodv_debug.h"
+#include "aodv_debug.h"
 
 
 #include <arpa/inet.h>
@@ -34,14 +34,14 @@
 #define UDP_BUFFER_SIZE     (128) /** with respect to IEEE 802.15.4's MTU */
 #define RCV_MSG_Q_SIZE      (32)  /* TODO: check if smaller values work, too */
 
-static void _init_addresses(void);
-static void _init_sock_snd(void);
+//static void _init_addresses(void);
+// static void _init_sock_snd(void);
 // static void *_aodv_receiver_thread(void *arg);
 // static void *_aodv_sender_thread(void *arg);
 // static void _deep_free_msg_container(struct msg_container *msg_container);
-static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
-                           struct rfc5444_writer_target *iface __attribute__((unused)),
-                           void *buffer, size_t length);
+// static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
+//                            struct rfc5444_writer_target *iface __attribute__((unused)),
+//                            void *buffer, size_t length);
 
 #ifdef DEBUG_ENABLED
 char addr_str[IPV6_MAX_ADDR_STR_LEN];
@@ -56,7 +56,7 @@ static struct netaddr_str nbuf;
 
 static aodvv2_metric_t _metric_type;
 // //static int sender_thread;
-static int _sock_snd;
+//static int _sock_snd;
 // static struct autobuf _hexbuf;
 // static struct sockaddr_in6 sa_wp;
 
@@ -72,8 +72,8 @@ static int _sock_snd;
 
 void aodv_init(void)
 {
-    
-    // AODV_DEBUG("%s()\n", __func__);
+    printf("hola gustavo despierta");
+     //AODV_DEBUG("%s()\n", __func__);
      seqnum_init();
     // routingtable_init();
     // clienttable_init();
@@ -218,38 +218,38 @@ void aodv_init(void)
 //  init the multicast address all RREQ and RERRS are sent to
 //   and the local address (source address) of this node
  
-static void _init_addresses(void)
-{
-    // init multicast address: set to to a link-local all nodes multicast address 
-    //ipv6_addr_set_all_nodes_addr(&_v6_addr_mcast);
-//    _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
-//     AODV_DEBUG("my multicast address is: %s\n",
-//     ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_mcast));
+// static void _init_addresses(void)
+// {
+//     // init multicast address: set to to a link-local all nodes multicast address 
+//     //ipv6_addr_set_all_nodes_addr(&_v6_addr_mcast);
+// //    _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
+// //     AODV_DEBUG("my multicast address is: %s\n",
+// //     ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_mcast));
 
-    /*//get best IP for sending 
-    ipv6_net_if_get_best_src_addr(&_v6_addr_local, &_v6_addr_mcast);
-    AODV_DEBUG("my src address is:       %s\n",
-          ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_local));
+//     /*//get best IP for sending 
+//     ipv6_net_if_get_best_src_addr(&_v6_addr_local, &_v6_addr_mcast);
+//     AODV_DEBUG("my src address is:       %s\n",
+//           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_local));
 
-    //  store src & multicast address as netaddr as well for easy interaction
-    //  with oonf based stuff 
-    ipv6_addr_t_to_netaddr(&_v6_addr_local, &na_local);
-    ipv6_addr_t_to_netaddr(&_v6_addr_mcast, &na_mcast);
-    ipv6_addr_set_loopback_addr(&_v6_addr_loopback);
+//     //  store src & multicast address as netaddr as well for easy interaction
+//     //  with oonf based stuff 
+//     ipv6_addr_t_to_netaddr(&_v6_addr_local, &na_local);
+//     ipv6_addr_t_to_netaddr(&_v6_addr_mcast, &na_mcast);
+//     ipv6_addr_set_loopback_addr(&_v6_addr_loopback);
 
-    //init sockaddr that write_packet will use to send data 
-    sa_wp.sin6_family = AF_INET6;
-    sa_wp.sin6_port = HTONS(MANET_PORT); */
-}
+//     //init sockaddr that write_packet will use to send data 
+//     sa_wp.sin6_family = AF_INET6;
+//     sa_wp.sin6_port = HTONS(MANET_PORT); */
+// }
 
 // init socket communication for sender 
-static void _init_sock_snd(void)
-{
-    _sock_snd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-    if(_sock_snd < 0) {
-        AODV_DEBUG("Error Creating Socket!\n");
-    }
-} 
+// static void _init_sock_snd(void)
+// {
+//     _sock_snd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+//     if(_sock_snd < 0) {
+//         AODV_DEBUG("Error Creating Socket!\n");
+//     }
+// } 
 
 // Build RREQs, RREPs and RERRs from the information contained in the thread's
  // message queue and send them 
@@ -456,40 +456,40 @@ static void _init_sock_snd(void)
  * Handle the output of the RFC5444 packet creation process. This callback is
  * called by every writer_send_* function.
  */
-static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
-                          struct rfc5444_writer_target *iface __attribute__((unused)),
-                          void *buffer, size_t length)
-{
-    AODV_DEBUG("%s()\n", __func__);
-    (void)buffer;
-    (void)length;
-    // // generate hexdump and human readable representation of packet
-    //  //and print to console 
-    // abuf_hexdump(&_hexbuf, "\t", buffer, length);
-    // rfc5444_print_direct(&_hexbuf, buffer, length);
-    // DEBUG("%s", abuf_getptr(&_hexbuf));
-    // abuf_clear(&_hexbuf);
+// static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
+//                           struct rfc5444_writer_target *iface __attribute__((unused)),
+//                           void *buffer, size_t length)
+// {
+//     AODV_DEBUG("%s()\n", __func__);
+//     (void)buffer;
+//     (void)length;
+//     // // generate hexdump and human readable representation of packet
+//     //  //and print to console 
+//     // abuf_hexdump(&_hexbuf, "\t", buffer, length);
+//     // rfc5444_print_direct(&_hexbuf, buffer, length);
+//     // DEBUG("%s", abuf_getptr(&_hexbuf));
+//     // abuf_clear(&_hexbuf);
 
-    // //  fetch the address the packet is supposed to be sent to (i.e. to a
-    // //   specific node or the multicast address) from the writer_target struct
-    // //  iface* is stored in. This is a bit hacky, but it does the trick. 
-    // wt = container_of(iface, struct writer_target, interface);
-    // netaddr_to_ipv6_addr_t(&wt->target_addr, (ipv6_addr_t*)&sa_wp.sin6_addr);
+//     // //  fetch the address the packet is supposed to be sent to (i.e. to a
+//     // //   specific node or the multicast address) from the writer_target struct
+//     // //  iface* is stored in. This is a bit hacky, but it does the trick. 
+//     // wt = container_of(iface, struct writer_target, interface);
+//     // netaddr_to_ipv6_addr_t(&wt->target_addr, (ipv6_addr_t*)&sa_wp.sin6_addr);
 
-    // // When originating a RREQ, add it to our RREQ table/update its predecessor 
-    // if (wt->type == RFC5444_MSGTYPE_RREQ
-    //     && netaddr_cmp(&wt->packet_data.origNode.addr, &na_local) == 0) {
-    //     AODV_DEBUG("originating RREQ with SeqNum %d towards %s via %s; updating RREQ table...\n",
-    //           wt->packet_data.origNode.seqnum,
-    //           netaddr_to_string(&nbuf, &wt->packet_data.targNode.addr),
-    //           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &sa_wp.sin6_addr));
-    //     rreqtable_is_redundant(&wt->packet_data);
-    // }
+//     // // When originating a RREQ, add it to our RREQ table/update its predecessor 
+//     // if (wt->type == RFC5444_MSGTYPE_RREQ
+//     //     && netaddr_cmp(&wt->packet_data.origNode.addr, &na_local) == 0) {
+//     //     AODV_DEBUG("originating RREQ with SeqNum %d towards %s via %s; updating RREQ table...\n",
+//     //           wt->packet_data.origNode.seqnum,
+//     //           netaddr_to_string(&nbuf, &wt->packet_data.targNode.addr),
+//     //           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &sa_wp.sin6_addr));
+//     //     rreqtable_is_redundant(&wt->packet_data);
+//     // }
 
-    // size_t bytes_sent =  sendto(_sock_snd, buffer, length, 0, (struct sockaddr*)&sa_wp, sizeof(sa_wp));
-    // (void) bytes_sent;
-    // AODV_DEBUG("%d bytes sent.\n", bytes_sent);
-}
+//     // size_t bytes_sent =  sendto(_sock_snd, buffer, length, 0, (struct sockaddr*)&sa_wp, sizeof(sa_wp));
+//     // (void) bytes_sent;
+//     // AODV_DEBUG("%d bytes sent.\n", bytes_sent);
+// }
 
 
 // free the matryoshka doll of cobbled-together structs that the sender_thread receives 

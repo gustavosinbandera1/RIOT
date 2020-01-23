@@ -54,11 +54,11 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   CFLAGS += -DGNRC_PKTBUF_SIZE=512
 endif
 
-USERMODULE += aodvv2
+USEMODULE += aodvv2
 
 
 
-export INCLUDES += -I${RIOTBASE}/sys/include/net/
+#export INCLUDES += -I${RIOTBASE}/sys/include/net/
 export INCLUDES += -I${RIOTBASE}/sys/net/routing/aodvv2/
 
 include $(RIOTBASE)/Makefile.include
