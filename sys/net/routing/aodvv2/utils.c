@@ -17,6 +17,8 @@
  * @author      Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
  */
 
+
+#define ENABLE_DEBUG (0)
 #include "utils.h"
 #include "debug.h"
 
@@ -24,7 +26,7 @@
 #include <mutex.h>
 #include <xtimer.h>
 
-#define ENABLE_DEBUG (0)
+
 
 /* Some aodvv2 utilities (mostly tables) */
 static mutex_t clientt_mutex;
@@ -112,7 +114,7 @@ void rreqtable_init(void)
 
     memset(&rreq_table, 0, sizeof(rreq_table));
     mutex_unlock(&rreqt_mutex);
-    AODV_DEBUG("RREQ table initialized.\n"); 
+    DEBUG("RREQ table initialized.\n"); 
 }
 
 

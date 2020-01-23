@@ -17,11 +17,11 @@
  * @author      Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
  */
 
+#define ENABLE_DEBUG (0)
 #include "debug.h"
-
 #include "aodv.h"
 #include "aodvv2/aodvv2.h"
-#include "aodv_debug.h"
+
 
 
 #include <arpa/inet.h>
@@ -29,13 +29,13 @@
 #include <sys/socket.h>
 
 
-#define ENABLE_DEBUG (0)
+
 
 #define UDP_BUFFER_SIZE     (128) /** with respect to IEEE 802.15.4's MTU */
 #define RCV_MSG_Q_SIZE      (32)  /* TODO: check if smaller values work, too */
 
-//static void _init_addresses(void);
-// static void _init_sock_snd(void);
+static void _init_addresses(void);
+static void _init_sock_snd(void);
 // static void *_aodv_receiver_thread(void *arg);
 // static void *_aodv_sender_thread(void *arg);
 // static void _deep_free_msg_container(struct msg_container *msg_container);
@@ -56,12 +56,12 @@ static struct netaddr_str nbuf;
 
 static aodvv2_metric_t _metric_type;
 // //static int sender_thread;
-//static int _sock_snd;
+static int _sock_snd;
 // static struct autobuf _hexbuf;
 // static struct sockaddr_in6 sa_wp;
 
 // static ipv6_addr_t /*_v6_addr_local,*/ _v6_addr_mcast/*, _v6_addr_loopback*/;
-// static struct netaddr na_local;  /* the same as _v6_addr_local, but to save us
+static struct netaddr na_local;  /* the same as _v6_addr_local, but to save us
 //   //                               * constant calls to ipv6_addr_t_to_netaddr()... */
 // static struct writer_target *wt;
 // //struct netaddr na_mcast = (struct netaddr){};
@@ -72,23 +72,24 @@ static aodvv2_metric_t _metric_type;
 
 void aodv_init(void)
 {
-    printf("hola gustavo despierta");
-     //AODV_DEBUG("%s()\n", __func__);
+    printf("hola gustavo despierta\n");
+    DEBUG("listening on port \n");
+    DEBUG("%s()\n", __func__);
      seqnum_init();
-    // routingtable_init();
-    // clienttable_init();
+     routingtable_init();
+     clienttable_init();
 
-    // aodv_set_metric_type(AODVV2_DEFAULT_METRIC_TYPE);
+     aodv_set_metric_type(AODVV2_DEFAULT_METRIC_TYPE);
 
-    // _init_addresses();
-    // _init_sock_snd();
+     _init_addresses();
+     _init_sock_snd();
 
 
     // // every node is its own client. 
-    // clienttable_add_client(&na_local);
-    // rreqtable_init();
+    clienttable_add_client(&na_local);
+    //rreqtable_init();
 
-    // aodv_packet_reader_init();
+     aodv_packet_reader_init();
     // aodv_packet_writer_init(_write_packet);
 
    
@@ -218,38 +219,38 @@ void aodv_init(void)
 //  init the multicast address all RREQ and RERRS are sent to
 //   and the local address (source address) of this node
  
-// static void _init_addresses(void)
-// {
-//     // init multicast address: set to to a link-local all nodes multicast address 
-//     //ipv6_addr_set_all_nodes_addr(&_v6_addr_mcast);
-// //    _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
-// //     AODV_DEBUG("my multicast address is: %s\n",
-// //     ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_mcast));
+static void _init_addresses(void)
+{
+    // init multicast address: set to to a link-local all nodes multicast address 
+    //ipv6_addr_set_all_nodes_addr(&_v6_addr_mcast);
+//    _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
+//     AODV_DEBUG("my multicast address is: %s\n",
+//     ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_mcast));
 
-//     /*//get best IP for sending 
-//     ipv6_net_if_get_best_src_addr(&_v6_addr_local, &_v6_addr_mcast);
-//     AODV_DEBUG("my src address is:       %s\n",
-//           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_local));
+    /*//get best IP for sending 
+    ipv6_net_if_get_best_src_addr(&_v6_addr_local, &_v6_addr_mcast);
+    AODV_DEBUG("my src address is:       %s\n",
+          ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_local));
 
-//     //  store src & multicast address as netaddr as well for easy interaction
-//     //  with oonf based stuff 
-//     ipv6_addr_t_to_netaddr(&_v6_addr_local, &na_local);
-//     ipv6_addr_t_to_netaddr(&_v6_addr_mcast, &na_mcast);
-//     ipv6_addr_set_loopback_addr(&_v6_addr_loopback);
+    //  store src & multicast address as netaddr as well for easy interaction
+    //  with oonf based stuff 
+    ipv6_addr_t_to_netaddr(&_v6_addr_local, &na_local);
+    ipv6_addr_t_to_netaddr(&_v6_addr_mcast, &na_mcast);
+    ipv6_addr_set_loopback_addr(&_v6_addr_loopback);
 
-//     //init sockaddr that write_packet will use to send data 
-//     sa_wp.sin6_family = AF_INET6;
-//     sa_wp.sin6_port = HTONS(MANET_PORT); */
-// }
+    //init sockaddr that write_packet will use to send data 
+    sa_wp.sin6_family = AF_INET6;
+    sa_wp.sin6_port = HTONS(MANET_PORT); */
+}
 
 // init socket communication for sender 
-// static void _init_sock_snd(void)
-// {
-//     _sock_snd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-//     if(_sock_snd < 0) {
-//         AODV_DEBUG("Error Creating Socket!\n");
-//     }
-// } 
+static void _init_sock_snd(void)
+{
+    _sock_snd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+    if(_sock_snd < 0) {
+        DEBUG("Error Creating Socket!\n");
+    }
+} 
 
 // Build RREQs, RREPs and RERRs from the information contained in the thread's
  // message queue and send them 

@@ -18,6 +18,7 @@ USEMODULE += shell_commands
 USEMODULE += ps
 
 USEPKG += oonf_api
+USEMODULE += oonf_rfc5444 
 
 
 BOARD_PROVIDES_NETIF := acd52832 airfy-beacon atmega256rfr2-xpro avr-rss2 b-l072z-lrwan1 cc2538dk fox \
@@ -58,7 +59,7 @@ USEMODULE += aodvv2
 
 
 
-#export INCLUDES += -I${RIOTBASE}/sys/include/net/
+export INCLUDES += -I${RIOTBASE}/sys/include/net/
 export INCLUDES += -I${RIOTBASE}/sys/net/routing/aodvv2/
 
 include $(RIOTBASE)/Makefile.include
