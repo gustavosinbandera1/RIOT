@@ -37,8 +37,8 @@
 static void _init_addresses(void);
 static void _init_sock_snd(void);
 static void *_aodv_receiver_thread(void *arg);
-// static void *_aodv_sender_thread(void *arg);
-// static void _deep_free_msg_container(struct msg_container *msg_container);
+static void *_aodv_sender_thread(void *arg);
+static void _deep_free_msg_container(struct msg_container *msg_container);
 static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
                         struct rfc5444_writer_target *iface __attribute__((unused)),
                         void *buffer, size_t length);
@@ -52,10 +52,10 @@ static struct netaddr_str nbuf;
 //static char aodv_snd_stack_buf[KERNEL_CONF_STACKSIZE_MAIN];
 
 static char aodv_rcv_stack_buf[THREAD_STACKSIZE_DEFAULT];
-//static char aodv_snd_stack_buf[THREAD_STACKSIZE_DEFAULT];
+static char aodv_snd_stack_buf[THREAD_STACKSIZE_DEFAULT];
 
 static aodvv2_metric_t _metric_type;
-// //static int sender_thread;
+static int sender_thread;
 static int _sock_snd;
 static struct autobuf _hexbuf;
 // static struct sockaddr_in6 sa_wp;
@@ -64,7 +64,7 @@ static struct autobuf _hexbuf;
 static struct netaddr na_local;  /* the same as _v6_addr_local, but to save us
 //   //                               * constant calls to ipv6_addr_t_to_netaddr()... */
 // static struct writer_target *wt;
-// //struct netaddr na_mcast = (struct netaddr){};
+//struct netaddr na_mcast = (struct netaddr){};
 
 
 
@@ -108,13 +108,13 @@ void aodv_init(void)
     thread_create(aodv_rcv_stack_buf, sizeof(aodv_rcv_stack_buf),
                   THREAD_PRIORITY_MAIN -1 ,THREAD_CREATE_STACKTEST, _aodv_receiver_thread, NULL, "_aodv_receiver_thread"); 
     
-    /*AODV_DEBUG("listening on port %d\n", HTONS(MANET_PORT));
+    //DEBUG("listening on port %d\n", HTONS(MANET_PORT));
     sender_thread = thread_create(aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf),
-                                  PRIORITY_MAIN, CREATE_STACKTEST, _aodv_sender_thread,
+                                  THREAD_PRIORITY_MAIN - 1, THREAD_CREATE_STACKTEST, _aodv_sender_thread,
                                   NULL, "_aodv_sender_thread");
 
     // register aodv for routing 
-    ipv6_iface_set_routing_provider(aodv_get_next_hop); */
+    //ipv6_iface_set_routing_provider(aodv_get_next_hop); 
 
 }
 
@@ -242,16 +242,16 @@ static void _init_sock_snd(void)
 
 // Build RREQs, RREPs and RERRs from the information contained in the thread's
  // message queue and send them 
-/* static void *_aodv_sender_thread(void *arg)
+static void *_aodv_sender_thread(void *arg)
 {
     (void) arg;
 
     msg_t msgq[RCV_MSG_Q_SIZE];
     msg_init_queue(msgq, sizeof msgq);
-    AODV_DEBUG("_aodv_sender_thread initialized.\n");
+    DEBUG("_aodv_sender_thread initialized.\n");
 
     while (true) {
-        AODV_DEBUG("%s()\n", __func__);
+        DEBUG("%s()\n", __func__);
         msg_t msg;
         msg_receive(&msg);
         struct msg_container *mc = (struct msg_container *) msg.content.ptr;
@@ -276,7 +276,7 @@ static void _init_sock_snd(void)
     }
 
     return NULL;
-} */
+}
 
 // receive RREQs, RREPs and RERRs and handle them 
 static void *_aodv_receiver_thread(void *arg)
@@ -482,23 +482,23 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
 
 
 // free the matryoshka doll of cobbled-together structs that the sender_thread receives 
-/* static void _deep_free_msg_container(struct msg_container *mc)
+static void _deep_free_msg_container(struct msg_container *mc)
 {
-    int type = mc->type;
-    if ((type == RFC5444_MSGTYPE_RREQ) || (type == RFC5444_MSGTYPE_RREP)) {
-        struct rreq_rrep_data *rreq_rrep_data = (struct rreq_rrep_data *) mc->data;
-        free(rreq_rrep_data->packet_data);
-        if (netaddr_cmp(rreq_rrep_data->next_hop, &na_mcast) != 0) {
-            free(rreq_rrep_data->next_hop);
-        }
-    }
-    else if (type == RFC5444_MSGTYPE_RERR) {
-        struct rerr_data *rerr_data = (struct rerr_data *) mc->data;
-        if (netaddr_cmp(rerr_data->next_hop, &na_mcast) != 0) {
-            free(rerr_data->next_hop);
-        }
-    }
-    free(mc->data);
-    free(mc);
+    (void)mc;
+    // int type = mc->type;
+    // if ((type == RFC5444_MSGTYPE_RREQ) || (type == RFC5444_MSGTYPE_RREP)) {
+    //     struct rreq_rrep_data *rreq_rrep_data = (struct rreq_rrep_data *) mc->data;
+    //     free(rreq_rrep_data->packet_data);
+    //     if (netaddr_cmp(rreq_rrep_data->next_hop, &na_mcast) != 0) {
+    //         free(rreq_rrep_data->next_hop);
+    //     }
+    // }
+    // else if (type == RFC5444_MSGTYPE_RERR) {
+    //     struct rerr_data *rerr_data = (struct rerr_data *) mc->data;
+    //     if (netaddr_cmp(rerr_data->next_hop, &na_mcast) != 0) {
+    //         free(rerr_data->next_hop);
+    //     }
+    // }
+    // free(mc->data);
+    // free(mc);
 }
- */
