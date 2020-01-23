@@ -36,26 +36,26 @@
 #define VDEBUG(...)
 #endif
 
-// static enum rfc5444_result _cb_rreq_blocktlv_addresstlvs_okay(
-//     struct rfc5444_reader_tlvblock_context *cont);
+static enum rfc5444_result _cb_rreq_blocktlv_addresstlvs_okay(
+    struct rfc5444_reader_tlvblock_context *cont);
 static enum rfc5444_result _cb_rreq_blocktlv_messagetlvs_okay(
     struct rfc5444_reader_tlvblock_context *cont);
 static enum rfc5444_result _cb_rreq_end_callback(
     struct rfc5444_reader_tlvblock_context *cont, bool dropped);
 
-// static enum rfc5444_result _cb_rrep_blocktlv_addresstlvs_okay(
-//     struct rfc5444_reader_tlvblock_context *cont);
+static enum rfc5444_result _cb_rrep_blocktlv_addresstlvs_okay(
+    struct rfc5444_reader_tlvblock_context *cont);
 static enum rfc5444_result _cb_rrep_blocktlv_messagetlvs_okay(
     struct rfc5444_reader_tlvblock_context *cont);
 static enum rfc5444_result _cb_rrep_end_callback(
     struct rfc5444_reader_tlvblock_context *cont, bool dropped);
 
-// static enum rfc5444_result _cb_rerr_blocktlv_addresstlvs_okay(
-//     struct rfc5444_reader_tlvblock_context *cont);
-// static enum rfc5444_result _cb_rerr_blocktlv_messagetlvs_okay(
-//     struct rfc5444_reader_tlvblock_context *cont);
-// static enum rfc5444_result _cb_rerr_end_callback(
-//     struct rfc5444_reader_tlvblock_context *cont, bool dropped);
+static enum rfc5444_result _cb_rerr_blocktlv_addresstlvs_okay(
+    struct rfc5444_reader_tlvblock_context *cont);
+static enum rfc5444_result _cb_rerr_blocktlv_messagetlvs_okay(
+    struct rfc5444_reader_tlvblock_context *cont);
+static enum rfc5444_result _cb_rerr_end_callback(
+    struct rfc5444_reader_tlvblock_context *cont, bool dropped);
 
 // // helper functions 
 // static uint8_t _get_link_cost(aodvv2_metric_t metricType);
@@ -87,12 +87,12 @@ static struct rfc5444_reader_tlvblock_consumer _rreq_consumer =
 // //  * Address consumer. Will be called once for every address in a message of
 // //  * type RFC5444_MSGTYPE_RREQ.
 
-// static struct rfc5444_reader_tlvblock_consumer _rreq_address_consumer =
-// {
-//     .msg_id = RFC5444_MSGTYPE_RREQ,
-//     .addrblock_consumer = true,
-//     .block_callback = _cb_rreq_blocktlv_addresstlvs_okay,
-// };
+static struct rfc5444_reader_tlvblock_consumer _rreq_address_consumer =
+{
+    .msg_id = RFC5444_MSGTYPE_RREQ,
+    .addrblock_consumer = true,
+    .block_callback = _cb_rreq_blocktlv_addresstlvs_okay,
+};
 
 
 // //  * Message consumer, will be called once for every message of
@@ -109,57 +109,57 @@ static struct rfc5444_reader_tlvblock_consumer _rrep_consumer =
 // //  * Address consumer. Will be called once for every address in a message of
 // //  * type RFC5444_MSGTYPE_RREP.
 
-// static struct rfc5444_reader_tlvblock_consumer _rrep_address_consumer =
-// {
-//     .msg_id = RFC5444_MSGTYPE_RREP,
-//     .addrblock_consumer = true,
-//     .block_callback = _cb_rrep_blocktlv_addresstlvs_okay,
-// };
+static struct rfc5444_reader_tlvblock_consumer _rrep_address_consumer =
+{
+    .msg_id = RFC5444_MSGTYPE_RREP,
+    .addrblock_consumer = true,
+    .block_callback = _cb_rrep_blocktlv_addresstlvs_okay,
+};
 
 
 // //  * Message consumer, will be called once for every message of
 // //  * type RFC5444_MSGTYPE_RERR that contains all the mandatory message TLVs
 
-// static struct rfc5444_reader_tlvblock_consumer _rerr_consumer =
-// {
-//     .msg_id = RFC5444_MSGTYPE_RERR,
-//     .block_callback = _cb_rerr_blocktlv_messagetlvs_okay,
-//     .end_callback = _cb_rerr_end_callback,
-// };
+static struct rfc5444_reader_tlvblock_consumer _rerr_consumer =
+{
+    .msg_id = RFC5444_MSGTYPE_RERR,
+    .block_callback = _cb_rerr_blocktlv_messagetlvs_okay,
+    .end_callback = _cb_rerr_end_callback,
+};
 
 
 // //  * Address consumer. Will be called once for every address in a message of
 // //  * type RFC5444_MSGTYPE_RERR.
 
-// static struct rfc5444_reader_tlvblock_consumer _rerr_address_consumer =
-// {
-//     .msg_id = RFC5444_MSGTYPE_RERR,
-//     .addrblock_consumer = true,
-//     .block_callback = _cb_rerr_blocktlv_addresstlvs_okay,
-// };
+static struct rfc5444_reader_tlvblock_consumer _rerr_address_consumer =
+{
+    .msg_id = RFC5444_MSGTYPE_RERR,
+    .addrblock_consumer = true,
+    .block_callback = _cb_rerr_blocktlv_addresstlvs_okay,
+};
 
 
 
 // //  * Address consumer entries definition
 // //  * TLV types RFC5444_MSGTLV__SEQNUM and RFC5444_MSGTLV_METRIC
 
-// static struct rfc5444_reader_tlvblock_consumer_entry _rreq_rrep_address_consumer_entries[] =
-// {
-//     [RFC5444_MSGTLV_ORIGSEQNUM] = { .type = RFC5444_MSGTLV_ORIGSEQNUM},
-//     [RFC5444_MSGTLV_TARGSEQNUM] = { .type = RFC5444_MSGTLV_TARGSEQNUM},
-//     [RFC5444_MSGTLV_METRIC] = { .type = RFC5444_MSGTLV_METRIC }
-// };
+static struct rfc5444_reader_tlvblock_consumer_entry _rreq_rrep_address_consumer_entries[] =
+{
+    [RFC5444_MSGTLV_ORIGSEQNUM] = { .type = RFC5444_MSGTLV_ORIGSEQNUM},
+    [RFC5444_MSGTLV_TARGSEQNUM] = { .type = RFC5444_MSGTLV_TARGSEQNUM},
+    [RFC5444_MSGTLV_METRIC] = { .type = RFC5444_MSGTLV_METRIC }
+};
 
 
 // //  * Address consumer entries definition
 // //  * TLV types RFC5444_MSGTLV__SEQNUM and RFC5444_MSGTLV_METRIC
 
-// static struct rfc5444_reader_tlvblock_consumer_entry _rerr_address_consumer_entries[] =
-// {
-//     [RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM] = {
-//         .type = RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM
-//     },
-// };
+static struct rfc5444_reader_tlvblock_consumer_entry _rerr_address_consumer_entries[] =
+{
+    [RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM] = {
+        .type = RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM
+    },
+};
 
 // // *
 // //  * This block callback is called for every address
@@ -192,17 +192,18 @@ static enum rfc5444_result _cb_rreq_blocktlv_messagetlvs_okay(struct rfc5444_rea
 // //  * @param cont
 // //  * @return
 
-// static enum rfc5444_result _cb_rreq_blocktlv_addresstlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
-// {
-// #ifdef DEBUG_ENABLED
-//     struct netaddr_str nbuf;
-// #endif
-//     struct rfc5444_reader_tlvblock_entry *tlv;
-//     bool is_origNode_addr = false;
-//     bool is_targNode_addr = false;
+static enum rfc5444_result _cb_rreq_blocktlv_addresstlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
+{
+    (void)cont;
+#ifdef DEBUG_ENABLED
+     struct netaddr_str nbuf;
+#endif
+    // struct rfc5444_reader_tlvblock_entry *tlv;
+    // bool is_origNode_addr = false;
+    // bool is_targNode_addr = false;
 
-//     VDEBUG("%s()\n", __func__);
-//     DEBUG("\taddr: %s\n", netaddr_to_string(&nbuf, &cont->addr));
+    VDEBUG("%s()\n", __func__);
+    //DEBUG("\taddr: %s\n", netaddr_to_string(&nbuf, &cont->addr));
 
 //     // handle OrigNode SeqNum TLV
 //     tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_ORIGSEQNUM].tlv;
@@ -250,8 +251,8 @@ static enum rfc5444_result _cb_rreq_blocktlv_messagetlvs_okay(struct rfc5444_rea
 //         packet_data.metricType = tlv->type_ext;
 //         packet_data.origNode.metric = *tlv->single_value;
 //     }
-//     return RFC5444_OKAY;
-// }
+    return RFC5444_OKAY;
+}
 
 // // *
 // //  * This callback is called every time the _rreq_consumer finishes reading a
@@ -413,60 +414,61 @@ static enum rfc5444_result _cb_rrep_blocktlv_messagetlvs_okay(struct rfc5444_rea
 // //  * @param cont
 // //  * @return
 
-// static enum rfc5444_result _cb_rrep_blocktlv_addresstlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
-// {
-// #ifdef DEBUG_ENABLED
-//     struct netaddr_str nbuf;
-// #endif
-//     struct rfc5444_reader_tlvblock_entry *tlv;
-//     bool is_targNode_addr = false;
+static enum rfc5444_result _cb_rrep_blocktlv_addresstlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
+{
+    (void)cont;
+#ifdef DEBUG_ENABLED
+    struct netaddr_str nbuf;
+#endif
+    // struct rfc5444_reader_tlvblock_entry *tlv;
+    // bool is_targNode_addr = false;
 
-//     VDEBUG("%s()\n", __func__);
-//     VDEBUG("\taddr: %s\n", netaddr_to_string(&nbuf, &cont->addr));
+   // VDEBUG("%s()\n", __func__);
+   // VDEBUG("\taddr: %s\n", netaddr_to_string(&nbuf, &cont->addr));
 
-//     // handle TargNode SeqNum TLV
-//     tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_TARGSEQNUM].tlv;
-//     if (tlv) {
-//         VDEBUG("\ttlv RFC5444_MSGTLV_TARGSEQNUM: %d\n", *tlv->single_value);
-//         is_targNode_addr = true;
-//         packet_data.targNode.addr = cont->addr;
-//         packet_data.targNode.seqnum = *tlv->single_value;
-//     }
+    // handle TargNode SeqNum TLV
+    // tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_TARGSEQNUM].tlv;
+    // if (tlv) {
+    //     VDEBUG("\ttlv RFC5444_MSGTLV_TARGSEQNUM: %d\n", *tlv->single_value);
+    //     is_targNode_addr = true;
+    //     packet_data.targNode.addr = cont->addr;
+    //     packet_data.targNode.seqnum = *tlv->single_value;
+    // }
 
-//     // handle OrigNode SeqNum TLV
-//     tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_ORIGSEQNUM].tlv;
-//     if (tlv) {
-//         VDEBUG("\ttlv RFC5444_MSGTLV_ORIGSEQNUM: %d\n", *tlv->single_value);
-//         is_targNode_addr = false;
-//         packet_data.origNode.addr = cont->addr;
-//         packet_data.origNode.seqnum = *tlv->single_value;
-//     }
-//     if (!tlv && !is_targNode_addr) {
-//         DEBUG("\tERROR: mandatory SeqNum TLV missing.\n");
-//         return RFC5444_DROP_PACKET;
-//     }
+    // // handle OrigNode SeqNum TLV
+    // tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_ORIGSEQNUM].tlv;
+    // if (tlv) {
+    //     VDEBUG("\ttlv RFC5444_MSGTLV_ORIGSEQNUM: %d\n", *tlv->single_value);
+    //     is_targNode_addr = false;
+    //     packet_data.origNode.addr = cont->addr;
+    //     packet_data.origNode.seqnum = *tlv->single_value;
+    // }
+    // if (!tlv && !is_targNode_addr) {
+    //     DEBUG("\tERROR: mandatory SeqNum TLV missing.\n");
+    //     return RFC5444_DROP_PACKET;
+    // }
 
-//     // handle Metric TLV
-//     // cppcheck: suppress false positive on non-trivially initialized arrays.
-//     //  *           this is a known bug: http://trac.cppcheck.net/ticket/5497
-//     // cppcheck-suppress arrayIndexOutOfBounds
-//     tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_METRIC].tlv;
-//     if (!tlv && is_targNode_addr) {
-//         DEBUG("\tERROR: Missing or unknown metric TLV.\n");
-//         return RFC5444_DROP_PACKET;
-//     }
-//     if (tlv) {
-//         if (!is_targNode_addr) {
-//             DEBUG("\tERROR: metric TLV belongs to wrong address.\n");
-//             return RFC5444_DROP_PACKET;
-//         }
-//         VDEBUG("\ttlv RFC5444_MSGTLV_METRIC val: %d, exttype: %d\n",
-//                *tlv->single_value, tlv->type_ext);
-//         packet_data.metricType = tlv->type_ext;
-//         packet_data.origNode.metric = *tlv->single_value;
-//     }
-//     return RFC5444_OKAY;
-// }
+    // // handle Metric TLV
+    // // cppcheck: suppress false positive on non-trivially initialized arrays.
+    // //  *           this is a known bug: http://trac.cppcheck.net/ticket/5497
+    // // cppcheck-suppress arrayIndexOutOfBounds
+    // tlv = _rreq_rrep_address_consumer_entries[RFC5444_MSGTLV_METRIC].tlv;
+    // if (!tlv && is_targNode_addr) {
+    //     DEBUG("\tERROR: Missing or unknown metric TLV.\n");
+    //     return RFC5444_DROP_PACKET;
+    // }
+    // if (tlv) {
+    //     if (!is_targNode_addr) {
+    //         DEBUG("\tERROR: metric TLV belongs to wrong address.\n");
+    //         return RFC5444_DROP_PACKET;
+    //     }
+    //     VDEBUG("\ttlv RFC5444_MSGTLV_METRIC val: %d, exttype: %d\n",
+    //            *tlv->single_value, tlv->type_ext);
+    //     packet_data.metricType = tlv->type_ext;
+    //     packet_data.origNode.metric = *tlv->single_value;
+    // }
+    return RFC5444_OKAY;
+}
 
 // // *
 // //  * This callback is called every time the _rreq_consumer finishes reading a
@@ -587,95 +589,96 @@ static enum rfc5444_result _cb_rrep_end_callback(
     return RFC5444_OKAY;
 }
 
-// static enum rfc5444_result _cb_rerr_blocktlv_messagetlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
-// {
-//     VDEBUG("%s()\n", __func__);
+static enum rfc5444_result _cb_rerr_blocktlv_messagetlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
+{
+    VDEBUG("%s()\n", __func__);
 
-//     if (!cont->has_hoplimit) {
-//         VDEBUG("\tERROR: missing hop limit\n");
-//         return RFC5444_DROP_PACKET;
-//     }
+    if (!cont->has_hoplimit) {
+        VDEBUG("\tERROR: missing hop limit\n");
+        return RFC5444_DROP_PACKET;
+    }
 
-//     packet_data.hoplimit = cont->hoplimit;
-//     if (packet_data.hoplimit == 0) {
-//         VDEBUG("\tERROR: Hoplimit is 0.\n");
-//         return RFC5444_DROP_PACKET;
-//     }
+    // packet_data.hoplimit = cont->hoplimit;
+    // if (packet_data.hoplimit == 0) {
+    //     VDEBUG("\tERROR: Hoplimit is 0.\n");
+    //     return RFC5444_DROP_PACKET;
+    // }
 
-//     packet_data.hoplimit--;
+    // packet_data.hoplimit--;
 
-//     // prepare buffer for unreachable nodes
-//     num_unreachable_nodes = 0;
-//     for (unsigned i = 0; i < AODVV2_MAX_UNREACHABLE_NODES; i++) {
-//         memset(&unreachable_nodes[i], 0, sizeof(unreachable_nodes[i]));
-//     }
-//     return RFC5444_OKAY;
-// }
+    // // prepare buffer for unreachable nodes
+    // num_unreachable_nodes = 0;
+    // for (unsigned i = 0; i < AODVV2_MAX_UNREACHABLE_NODES; i++) {
+    //     memset(&unreachable_nodes[i], 0, sizeof(unreachable_nodes[i]));
+    // }
+    return RFC5444_OKAY;
+}
 
-// static enum rfc5444_result _cb_rerr_blocktlv_addresstlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
-// {
-// #ifdef DEBUG_ENABLED
-//     struct netaddr_str nbuf;
-// #endif
-//     struct aodvv2_routing_entry_t *unreachable_entry;
-//     struct rfc5444_reader_tlvblock_entry *tlv;
+static enum rfc5444_result _cb_rerr_blocktlv_addresstlvs_okay(struct rfc5444_reader_tlvblock_context *cont)
+{
+    (void)cont;
+#ifdef DEBUG_ENABLED
+    struct netaddr_str nbuf;
+#endif
+    // struct aodvv2_routing_entry_t *unreachable_entry;
+    // struct rfc5444_reader_tlvblock_entry *tlv;
 
-//     VDEBUG("%s()\n", __func__);
-//     VDEBUG("\tmessage type: %d\n", cont->type);
-//     VDEBUG("\taddr: %s\n", netaddr_to_string(&nbuf, &cont->addr));
+    // VDEBUG("%s()\n", __func__);
+    // VDEBUG("\tmessage type: %d\n", cont->type);
+    // VDEBUG("\taddr: %s\n", netaddr_to_string(&nbuf, &cont->addr));
 
-//     // Out of buffer size for more unreachable nodes. We're screwed, basically.
-//     if (num_unreachable_nodes == AODVV2_MAX_UNREACHABLE_NODES) {
-//         return RFC5444_OKAY;
-//     }
+    // // Out of buffer size for more unreachable nodes. We're screwed, basically.
+    // if (num_unreachable_nodes == AODVV2_MAX_UNREACHABLE_NODES) {
+    //     return RFC5444_OKAY;
+    // }
 
-//     // gather packet data
-//     packet_data.origNode.addr = cont->addr;
+    // // gather packet data
+    // packet_data.origNode.addr = cont->addr;
 
-//     // handle this unreachable node's SeqNum TLV
-//     // cppcheck: suppress false positive on non-trivially initialized arrays.
-//     //  *           this is a known bug: http://trac.cppcheck.net/ticket/5497
-//     // cppcheck-suppress arrayIndexOutOfBounds
-//     tlv = _rerr_address_consumer_entries[RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM].tlv;
-//     if (tlv) {
-//         VDEBUG("\ttlv RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM: %d\n", *tlv->single_value);
-//         packet_data.origNode.seqnum = *tlv->single_value;
-//     }
+    // // handle this unreachable node's SeqNum TLV
+    // // cppcheck: suppress false positive on non-trivially initialized arrays.
+    // //  *           this is a known bug: http://trac.cppcheck.net/ticket/5497
+    // // cppcheck-suppress arrayIndexOutOfBounds
+    // tlv = _rerr_address_consumer_entries[RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM].tlv;
+    // if (tlv) {
+    //     VDEBUG("\ttlv RFC5444_MSGTLV_UNREACHABLE_NODE_SEQNUM: %d\n", *tlv->single_value);
+    //     packet_data.origNode.seqnum = *tlv->single_value;
+    // }
 
-//     // Check if there is an entry for unreachable node in our routing table
-//     unreachable_entry = routingtable_get_entry(&packet_data.origNode.addr, packet_data.metricType);
-//     if (unreachable_entry) {
-//         VDEBUG("\t found possibly unreachable entry.\n");
+    // // Check if there is an entry for unreachable node in our routing table
+    // unreachable_entry = routingtable_get_entry(&packet_data.origNode.addr, packet_data.metricType);
+    // if (unreachable_entry) {
+    //     VDEBUG("\t found possibly unreachable entry.\n");
 
-//         // check if route to unreachable node has to be marked as broken and RERR has to be forwarded
-//         if (netaddr_cmp(&unreachable_entry->nextHopAddr, &packet_data.sender) == 0
-//                 && (!tlv || seqnum_cmp(unreachable_entry->seqnum, packet_data.origNode.seqnum) == 0)) {
-//             unreachable_entry->state = ROUTE_STATE_BROKEN;
-//             unreachable_nodes[num_unreachable_nodes].addr = packet_data.origNode.addr;
-//             unreachable_nodes[num_unreachable_nodes].seqnum = packet_data.origNode.seqnum;
-//             num_unreachable_nodes++;
-//         }
-//     }
-//     return RFC5444_OKAY;
-// }
+    //     // check if route to unreachable node has to be marked as broken and RERR has to be forwarded
+    //     if (netaddr_cmp(&unreachable_entry->nextHopAddr, &packet_data.sender) == 0
+    //             && (!tlv || seqnum_cmp(unreachable_entry->seqnum, packet_data.origNode.seqnum) == 0)) {
+    //         unreachable_entry->state = ROUTE_STATE_BROKEN;
+    //         unreachable_nodes[num_unreachable_nodes].addr = packet_data.origNode.addr;
+    //         unreachable_nodes[num_unreachable_nodes].seqnum = packet_data.origNode.seqnum;
+    //         num_unreachable_nodes++;
+    //     }
+    // }
+    return RFC5444_OKAY;
+}
 
-// static enum rfc5444_result _cb_rerr_end_callback(struct rfc5444_reader_tlvblock_context *cont, bool dropped)
-// {
-//     (void) cont;
+static enum rfc5444_result _cb_rerr_end_callback(struct rfc5444_reader_tlvblock_context *cont, bool dropped)
+{
+    (void) cont;
 
-//     if (dropped) {
-//         VDEBUG("\tDropping packet.\n");
-//         return RFC5444_DROP_PACKET;
-//     }
+    if (dropped) {
+        VDEBUG("\tDropping packet.\n");
+        return RFC5444_DROP_PACKET;
+    }
 
-//     if (num_unreachable_nodes == 0) {
-//         VDEBUG("\tNo unreachable nodes from my routing table. Dropping Packet.\n");
-//         return RFC5444_DROP_PACKET;
-//     }
-//     // gather all unreachable nodes and put them into a RERR
-//   //  aodv_send_rerr(unreachable_nodes, num_unreachable_nodes, &na_mcast);
-//     return RFC5444_OKAY;
-// }
+    // if (num_unreachable_nodes == 0) {
+    //     VDEBUG("\tNo unreachable nodes from my routing table. Dropping Packet.\n");
+    //     return RFC5444_DROP_PACKET;
+    // }
+    // gather all unreachable nodes and put them into a RERR
+  //  aodv_send_rerr(unreachable_nodes, num_unreachable_nodes, &na_mcast);
+    return RFC5444_OKAY;
+}
 
 void aodv_packet_reader_init(void)
 {
@@ -688,19 +691,18 @@ void aodv_packet_reader_init(void)
     // //  * rfc5444_reader_tlvblock_consumer_entry empty
     rfc5444_reader_add_message_consumer(&reader, &_rreq_consumer, NULL, 0);
     rfc5444_reader_add_message_consumer(&reader, &_rrep_consumer, NULL, 0);
-    // rfc5444_reader_add_message_consumer(&reader, &_rerr_consumer,
-    //                                     NULL, 0);
+    rfc5444_reader_add_message_consumer(&reader, &_rerr_consumer,NULL, 0);
 
     // // register address consumer
-    // rfc5444_reader_add_message_consumer(&reader, &_rreq_address_consumer,
-    //                                     _rreq_rrep_address_consumer_entries,
-    //                                     ARRAYSIZE(_rreq_rrep_address_consumer_entries));
-    // rfc5444_reader_add_message_consumer(&reader, &_rrep_address_consumer,
-    //                                     _rreq_rrep_address_consumer_entries,
-    //                                     ARRAYSIZE(_rreq_rrep_address_consumer_entries));
-    // rfc5444_reader_add_message_consumer(&reader, &_rerr_address_consumer,
-    //                                     _rerr_address_consumer_entries,
-    //                                     ARRAYSIZE(_rerr_address_consumer_entries));
+    rfc5444_reader_add_message_consumer(&reader, &_rreq_address_consumer,
+                                    _rreq_rrep_address_consumer_entries,
+                                    ARRAYSIZE(_rreq_rrep_address_consumer_entries));
+    rfc5444_reader_add_message_consumer(&reader, &_rrep_address_consumer,
+                                    _rreq_rrep_address_consumer_entries,
+                                    ARRAYSIZE(_rreq_rrep_address_consumer_entries));
+    rfc5444_reader_add_message_consumer(&reader, &_rerr_address_consumer,
+                                    _rerr_address_consumer_entries,
+                                    ARRAYSIZE(_rerr_address_consumer_entries));
 }
 
 // void aodv_packet_reader_cleanup(void)
