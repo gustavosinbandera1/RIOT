@@ -40,7 +40,9 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   # the application dumps received packets to stdout
   USEMODULE += gnrc_pktdump
 
-  USEMODULE += gnrc_ipv6_default #All networking modules are loaded
+  USEMODULE += gnrc_ipv6 #All networking modules are loaded
+
+  USEMODULE += gnrc_ipv6_router
   
   # Import posix sockets
   USEMODULE += gnrc_sock_udp

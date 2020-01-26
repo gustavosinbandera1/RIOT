@@ -17,7 +17,7 @@
  * @author      Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
  */
 
-#define ENABLE_DEBUG (0)
+#define ENABLE_DEBUG (1)
 #include "debug.h"
 #include "aodv.h"
 #include "aodvv2/aodvv2.h"
@@ -27,6 +27,12 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+#include "net/gnrc/netif/ieee802154.h"
+#include "net/netdev_test.h"
+
+
+static gnrc_netif_t *ieee802154_netif = NULL;
 
 
 
@@ -43,9 +49,10 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
                         struct rfc5444_writer_target *iface __attribute__((unused)),
                         void *buffer, size_t length);
 
-#ifdef DEBUG_ENABLED
-char addr_str[IPV6_MAX_ADDR_STR_LEN];
-static struct netaddr_str nbuf;
+#ifdef ENABLE_DEBUG
+//char addr_str[IPV6_MAX_ADDR_STR_LEN];
+char addr_str[IPV6_ADDR_MAX_STR_LEN];
+//static struct netaddr_str nbuf;
 #endif
 
 //static char aodv_rcv_stack_buf[KERNEL_CONF_STACKSIZE_MAIN];
@@ -60,13 +67,19 @@ static int _sock_snd;
 static struct autobuf _hexbuf;
 // static struct sockaddr_in6 sa_wp;
 
-// static ipv6_addr_t /*_v6_addr_local,*/ _v6_addr_mcast/*, _v6_addr_loopback*/;
+static ipv6_addr_t _v6_addr_local, _v6_addr_mcast/*, _v6_addr_loopback*/;
 static struct netaddr na_local;  /* the same as _v6_addr_local, but to save us
 //   //                               * constant calls to ipv6_addr_t_to_netaddr()... */
 // static struct writer_target *wt;
-//struct netaddr na_mcast = (struct netaddr){};
+struct netaddr na_mcast = (struct netaddr){};
 
 
+
+
+// #define IEEE802154_STACKSIZE        (THREAD_STACKSIZE_MAIN)
+// static char ieee802154_netif_stack[IEEE802154_STACKSIZE];
+
+ipv6_addr_t ipv6_addrs = {0};
 
 
 
@@ -77,16 +90,68 @@ void aodv_init(void)
     DEBUG("%s()\n", __func__);
 
 
-     seqnum_init();
-     routingtable_init();
-     clienttable_init();
+    //get netif interface
+    ieee802154_netif = gnrc_netif_iter(ieee802154_netif);
+    if (ieee802154_netif != NULL) {
+        DEBUG("tenemos una interface workaround: %d\n",ieee802154_netif->pid);
+    }
+
+     uint16_t temp; 
+     uint16_t res = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_CHANNEL, 0, &temp, sizeof(temp));
+     (void)res;
+     printf("EL CANAL ES :%u\n",temp );
+    
+    int r = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 0, &ipv6_addrs, sizeof(ipv6_addrs));
+        if (r < 0) {
+             return;
+         }
+        for (unsigned i = 0; i < (unsigned)(r / sizeof(ipv6_addr_t)); i++) {
+            char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
+            ipv6_addr_to_str(ipv6_addr, &ipv6_addrs, IPV6_ADDR_MAX_STR_LEN);
+            printf("My address is %s\n", ipv6_addr);
+        }
+
+
+
+
+
+    // static netdev_test_t _devs[GNRC_NETIF_NUMOF];
+    // netdev_t *ieee802154_dev = (netdev_t *)&_devs[0];
+   
+    // (void)ieee802154_dev;
+    // ipv6_addr_t ipv6_addr[1];
+    // (void)ipv6_addr;
+
+    // ieee802154_netif = gnrc_netif_ieee802154_create(
+    //            ieee802154_netif_stack, IEEE802154_STACKSIZE, GNRC_NETIF_PRIO,"wpan", ieee802154_dev);
+    
+
+
+
+
+
+    // gnrc_netapi_get(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 0, ipv6_addr, sizeof(ipv6_addr));
+
+    //  char ipv_addr[IPV6_ADDR_MAX_STR_LEN];
+
+    //         ipv6_addr_to_str(ipv_addr, &ipv6_addr[0], IPV6_ADDR_MAX_STR_LEN);
+    //          printf("My address is %s\n", ipv_addr);
+    
+
+
+    
      aodv_set_metric_type(AODVV2_DEFAULT_METRIC_TYPE);
      _init_addresses();
      _init_sock_snd();
 
+    seqnum_init();
+    routingtable_init();
+    clienttable_init();
+
     // // every node is its own client. 
     clienttable_add_client(&na_local);
-    //rreqtable_init();
+    rreqtable_init();
+
 
 
     // init reader and writer 
@@ -126,9 +191,9 @@ void aodv_init(void)
     _metric_type = metric_type;
 }
 
-/* void aodv_send_rreq(struct aodvv2_packet_data *packet_data)
+void aodv_send_rreq(struct aodvv2_packet_data *packet_data)
 {
-    AODV_DEBUG("%s()\n", __func__);
+    DEBUG("%s()\n", __func__);
 
     struct aodvv2_packet_data *pd = malloc(sizeof(struct aodvv2_packet_data));
     memcpy(pd, packet_data, sizeof(struct aodvv2_packet_data));
@@ -149,7 +214,7 @@ void aodv_init(void)
     msg.content.ptr = (char *) mc;
 
     msg_try_send(&msg, sender_thread);
-} */
+} 
 
 /* void aodv_send_rrep(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop)
 {
@@ -209,12 +274,15 @@ void aodv_init(void)
  
 static void _init_addresses(void)
 {
-    // init multicast address: set to to a link-local all nodes multicast address 
-    //ipv6_addr_set_all_nodes_addr(&_v6_addr_mcast);
-//    _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
-//     AODV_DEBUG("my multicast address is: %s\n",
-//     ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_mcast));
 
+
+
+    // init multicast address: set to to a link-local all nodes multicast address 
+    _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
+    DEBUG("my multicast address is: %s\n",ipv6_addr_to_str(addr_str, &_v6_addr_mcast,IPV6_ADDR_MAX_STR_LEN));
+
+  DEBUG("my src address is:       %s\n",
+          ipv6_addr_to_str(addr_str, &_v6_addr_local, IPV6_ADDR_MAX_STR_LEN));
     /*//get best IP for sending 
     ipv6_net_if_get_best_src_addr(&_v6_addr_local, &_v6_addr_mcast);
     AODV_DEBUG("my src address is:       %s\n",
@@ -254,6 +322,7 @@ static void *_aodv_sender_thread(void *arg)
         DEBUG("%s()\n", __func__);
         msg_t msg;
         msg_receive(&msg);
+         DEBUG("TESTING: RECIVIENDO MENSAJE\n");
         struct msg_container *mc = (struct msg_container *) msg.content.ptr;
 
         if (mc->type == RFC5444_MSGTYPE_RREQ) {
