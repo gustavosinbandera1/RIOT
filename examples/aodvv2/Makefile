@@ -32,9 +32,9 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   # gnrc is a meta module including all required, basic gnrc networking modules
   USEMODULE += gnrc
   # use the default network interface for the board
-  USEMODULE += gnrc_netdev_default
+  #USEMODULE += gnrc_netdev_default
   # automatically initialize the network interface
-  USEMODULE += auto_init_gnrc_netif
+  #USEMODULE += auto_init_gnrc_netif
 
 
   # the application dumps received packets to stdout
@@ -52,6 +52,25 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   USEMODULE += xtimer
   USEMODULE += timex
 
+
+  # use IEEE 802.15.4 as link-layer protocol
+USEMODULE += netdev_ieee802154
+USEMODULE += netdev_test
+
+
+
+#neighbord discovery
+USEMODULE += gnrc_ipv6
+USEMODULE += gnrc_sixlowpan
+USEMODULE += gnrc_sixlowpan_ctx
+USEMODULE += gnrc_ipv6_nib_6ln
+USEMODULE += gnrc_netif
+USEMODULE += embunit
+
+
+
+
+
   # We use only the lower layers of the GNRC network stack, hence, we can
   # reduce the size of the packet buffer a bit
   CFLAGS += -DGNRC_PKTBUF_SIZE=512
@@ -65,6 +84,13 @@ export INCLUDES += -I${RIOTBASE}/sys/include/net/
 export INCLUDES += -I${RIOTBASE}/sys/net/routing/aodvv2/
 
 include $(RIOTBASE)/Makefile.include
+
+
+# lower log-level to save memory of LOG_WARNING() in gnrc_netif
+CFLAGS += -DLOG_LEVEL=LOG_ERROR
+CFLAGS += -DGNRC_NETTYPE_NDP=GNRC_NETTYPE_TEST
+CFLAGS += -DGNRC_PKTBUF_SIZE=512
+CFLAGS += -DTEST_SUITES
 
 # Set a custom channel if needed
 #include $(RIOTMAKE)/default-radio-settings.inc.mk

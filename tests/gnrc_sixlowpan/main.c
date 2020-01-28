@@ -97,6 +97,7 @@ static int _get_netdev_addr_long(netdev_t *netdev, void *value, size_t max_len)
 static void _init_interface(void)
 {
     gnrc_netif_t *netif;
+    printf("going to print data\n");
 
     netdev_test_setup(&_ieee802154_dev, NULL);
     netdev_test_set_get_cb(&_ieee802154_dev, NETOPT_DEVICE_TYPE,
@@ -114,16 +115,20 @@ static void _init_interface(void)
             "dummy_netif", (netdev_t *)&_ieee802154_dev);
     ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
 
+    printf("IF created success\n");
+
     /* fd01::01 */
     addr.u8[0] = 0xfd;
     addr.u8[1] = 0x01;
     addr.u8[15] = 0x01;
 
-    xtimer_usleep(500); /* wait for thread to start */
+    //xtimer_usleep(500); /* wait for thread to start */
     if (gnrc_netapi_set(netif->pid, NETOPT_IPV6_ADDR, 64U << 8U, &addr,
                         sizeof(addr)) < 0) {
         printf("error: unable to add IPv6 address fd01::1/64 to interface %u\n",
                netif->pid);
+    } else {
+        printf("all was ok\n");
     }
 }
 

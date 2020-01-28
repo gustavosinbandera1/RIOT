@@ -31,7 +31,7 @@ extern "C" {
 #define MANET_PORT  269                 /** RFC5498 */
 
 enum aodvv2_constants {
-    AODVV2_MAX_HOPCOUNT = 250,          /**< see AODVv2 draft, section 14.2.*/
+    AODVV2_MAX_HOPCOUNT = 255,          /**< see AODVv2 draft, section 14.2.*/
     AODVV2_MAX_ROUTING_ENTRIES = 8,   /**< maximum number of entries
                                          *   in the routing table */
     AODVV2_ACTIVE_INTERVAL = 5,         /**< seconds */

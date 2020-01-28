@@ -16,20 +16,21 @@ start
 ########################## Machine 0 - end ##########################
 
 ######################### Machine 1 - begin #########################
-#$name="cathode"
-#$bin=@radio-firmware-recv.cc2538dk
-#i $ORIGIN/radio-firmware.resc
-#wireless SetPosition radio 10 0 0
-#showAnalyzer sysbus.uart0
-#mach clear
+$name="cathode"
+$bin=@radio-firmware-recv.cc2538dk
+i $ORIGIN/radio-firmware.resc
+wireless SetPosition radio 10 0 0
+showAnalyzer sysbus.uart0
+mach clear
+start
 ########################## Machine 1 - end ##########################
 
 ######################### Machine 2 - begin #########################
-#$name="vcc"
-#$bin=@radio-firmware-recv.cc2538dk
-#i $ORIGIN/radio-firmware.resc
-#wireless SetPosition radio 20 0 0
-#showAnalyzer sysbus.uart0
-#mach clear
-#start
+$name="vcc"
+$bin=@radio-firmware-recv.cc2538dk
+i $ORIGIN/radio-firmware.resc
+wireless SetPosition radio 20 0 0
+showAnalyzer sysbus.uart0
+mach clear
+start
 ########################## Machine 2 - end ##########################
