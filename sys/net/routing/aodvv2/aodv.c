@@ -43,8 +43,6 @@
 #include "net/gnrc/netif.h"
 #include "net/gnrc/netif/conf.h"
 
-#include "net/gnrc/netif/hdr.h"
-#include "net/gnrc/pktdump.h"
 
 
 #include "assert.h"
@@ -54,14 +52,13 @@
 
 //for neighbords
 #include "msg.h"
-#include "net/gnrc/ipv6/nib.h"
 #include "net/gnrc/netif/internal.h"
 #include "sched.h"
 #include "thread.h"
 
 
 static gnrc_netif_t *ieee802154_netif = NULL;
-static netdev_test_t _ieee802154_dev;
+
 
 #define _MSG_QUEUE_SIZE  (2)
 
@@ -78,14 +75,6 @@ static netdev_test_t _ieee802154_dev;
     }
 
 
-#define _LL0            (0xce)
-#define _LL1            (0xab)
-#define _LL2            (0xfe)
-#define _LL3            (0xad)
-#define _LL4            (0xf7)
-#define _LL5            (0x26)
-#define _LL6            (0xef)
-#define _LL7            (0xa4)
 
 
 
@@ -100,23 +89,8 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
 
 
 
-static int _get_netdev_device_type(netdev_t *netdev, void *value, size_t max_len);
-static int _get_netdev_proto(netdev_t *netdev, void *value, size_t max_len);
-static int _get_netdev_max_packet_size(netdev_t *netdev, void *value, size_t max_len);
-static int _get_netdev_src_len(netdev_t *netdev, void *value, size_t max_len);
-static int _get_netdev_addr_long(netdev_t *netdev, void *value, size_t max_len);
-
-static void test_get_next_hop_l2addr__link_local_EHOSTUNREACH(void);
 
 
-
-
-static msg_t _main_msg_queue[_MSG_QUEUE_SIZE];
-static gnrc_netreg_entry_t dumper;
-static const ipv6_addr_t _rem_ll = { {
-                0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-            _LL0 ^ 2, _LL1, _LL2, _LL3, _LL4, _LL5, _LL6, _LL7 + 1
-        } };
 
 //static void _send_packet(void);
 #ifdef ENABLE_DEBUG
@@ -147,13 +121,9 @@ struct netaddr na_mcast = (struct netaddr){};
 
 
 #define IEEE802154_STACKSIZE        (THREAD_STACKSIZE_MAIN)
-static char _netif_stack[THREAD_STACKSIZE_DEFAULT];
-static netdev_test_t _ieee802154_dev;
-static const uint8_t _ieee802154_local_eui64[] = IEEE802154_LOCAL_EUI64;
 
-static gnrc_netif_t *netif;
 
-//ipv6_addr_t ipv6_addrs = {0};
+ipv6_addr_t ipv6_addrs = {0};
 
 
 
@@ -163,113 +133,32 @@ void aodv_init(void)
     DEBUG("listening on port \n");
     DEBUG("%s()\n", __func__);
 
-    //(void)ieee802154_netif;
+    (void)ieee802154_netif;
 
-    // //get netif interface
-    // ieee802154_netif = gnrc_netif_iter(ieee802154_netif);
-    // if (ieee802154_netif != NULL) {
-    //     DEBUG("tenemos una interface workaround: %d\n",ieee802154_netif->pid);
-    // }
+    //get netif interface
+    ieee802154_netif = gnrc_netif_iter(ieee802154_netif);
+    if (ieee802154_netif != NULL) {
+        DEBUG("tenemos una interface workaround: %d\n",ieee802154_netif->pid);
+    }
 
-    //  uint16_t temp; 
-    //  uint16_t res = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_CHANNEL, 0, &temp, sizeof(temp));
-    //  (void)res;
-    //  printf("EL CANAL ES :%u\n",temp );
+     uint16_t temp; 
+     uint16_t res = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_CHANNEL, 0, &temp, sizeof(temp));
+     (void)res;
+     printf("EL CANAL ES :%u\n",temp );
     
-    // int r = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 0, &ipv6_addrs, sizeof(ipv6_addrs));
-    //     if (r < 0) {
-    //          return;
-    //      }
-    //     for (unsigned i = 0; i < (unsigned)(r / sizeof(ipv6_addr_t)); i++) {
-    //         char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
-    //         ipv6_addr_to_str(ipv6_addr, &ipv6_addrs, IPV6_ADDR_MAX_STR_LEN);
-    //         printf("My address is %s\n", ipv6_addr);
-    //     }
+    int r = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 0, &ipv6_addrs, sizeof(ipv6_addrs));
+        if (r < 0) {
+             return;
+         }
+        for (unsigned i = 0; i < (unsigned)(r / sizeof(ipv6_addr_t)); i++) {
+            char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
+            ipv6_addr_to_str(ipv6_addr, &ipv6_addrs, IPV6_ADDR_MAX_STR_LEN);
+            printf("My address is %s\n", ipv6_addr);
+        }
 
 
 
 
-
-    msg_init_queue(_main_msg_queue, _MSG_QUEUE_SIZE);
-    netdev_test_setup(&_ieee802154_dev, 0);
-    gnrc_netreg_init ();
-
-    //netdev_test_setup(&_ieee802154_dev, NULL);
-    netdev_test_set_get_cb(&_ieee802154_dev, NETOPT_DEVICE_TYPE, _get_netdev_device_type);
-    netdev_test_set_get_cb(&_ieee802154_dev, NETOPT_PROTO, _get_netdev_proto);
-    netdev_test_set_get_cb(&_ieee802154_dev, NETOPT_MAX_PDU_SIZE, _get_netdev_max_packet_size);
-    netdev_test_set_get_cb(&_ieee802154_dev, NETOPT_SRC_LEN, _get_netdev_src_len);
-    netdev_test_set_get_cb(&_ieee802154_dev, NETOPT_ADDRESS_LONG, _get_netdev_addr_long);
-    
-    gnrc_netreg_entry_init_pid(&dumper, GNRC_NETREG_DEMUX_CTX_ALL,
-                               sched_active_pid);
-    gnrc_netreg_register(GNRC_NETTYPE_NDP, &dumper);
-
-   // test_get_next_hop_l2addr__link_local();
-    gnrc_ipv6_nib_nc_t nce;
-
-    gnrc_ipv6_nib_get_next_hop_l2addr(&_rem_ll,(gnrc_netif_t*)&_ieee802154_dev, NULL, &nce);
-
-   printf("copiando y salio : %d",memcmp(&_rem_ll, &nce.ipv6, sizeof(_rem_ll))) ;
-
- gnrc_ipv6_nib_nc_get_nud_state(&nce);
-(void)netif;
-
-    ieee802154_netif = gnrc_netif_ieee802154_create(
-            _netif_stack, THREAD_STACKSIZE_DEFAULT, GNRC_NETIF_PRIO,
-            "dummy_netif", (netdev_t *)&_ieee802154_dev);
-
-    test_get_next_hop_l2addr__link_local_EHOSTUNREACH();
-
-
-
-
-
-    //ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
-
-    // printf("IF created success\n");
-    // ipv6_addr_t addr = IPV6_ADDR_UNSPECIFIED;
-    // /* fd01::01 */
-    // addr.u8[0] = 0xfd;
-    // addr.u8[1] = 0x01;
-    // addr.u8[15] = 0x01;
-
-   // xtimer_usleep(500); /* wait for thread to start */
-    // if (gnrc_netapi_set(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 64U << 8U, &addr,
-    //                     sizeof(addr)) < 0) {
-    //     printf("error: unable to add IPv6 address fd01::1/64 to interface %u\n",
-    //            ieee802154_netif->pid);
-    // }
-    // else {
-    //     printf("TODO SALIO MUY BIEN HASTA AQUI *******************************************\n");
-    // }
-    //_send_packet();
-
-
-
-
-    // static netdev_test_t _devs[GNRC_NETIF_NUMOF];
-    // netdev_t *ieee802154_dev = (netdev_t *)&_devs[0];
-   
-    // (void)ieee802154_dev;
-    // ipv6_addr_t ipv6_addr[1];
-    // (void)ipv6_addr;
-
-    // ieee802154_netif = gnrc_netif_ieee802154_create(
-    //            ieee802154_netif_stack, IEEE802154_STACKSIZE, GNRC_NETIF_PRIO,"wpan", ieee802154_dev);
-    
-
-
-
-
-
-    // gnrc_netapi_get(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 0, ipv6_addr, sizeof(ipv6_addr));
-
-    //  char ipv_addr[IPV6_ADDR_MAX_STR_LEN];
-
-    //         ipv6_addr_to_str(ipv_addr, &ipv6_addr[0], IPV6_ADDR_MAX_STR_LEN);
-    //          printf("My address is %s\n", ipv_addr);
-    
 
 
     
@@ -315,63 +204,6 @@ void aodv_init(void)
     //ipv6_iface_set_routing_provider(aodv_get_next_hop); 
 
 }
-
-
-static int _get_netdev_device_type(netdev_t *netdev, void *value, size_t max_len)
-{
-    assert(max_len == sizeof(uint16_t));
-    (void)netdev;
-
-    *((uint16_t *)value) = NETDEV_TYPE_IEEE802154;
-    return sizeof(uint16_t);
-}
-
-static int _get_netdev_proto(netdev_t *netdev, void *value, size_t max_len)
-{
-    assert(max_len == sizeof(gnrc_nettype_t));
-    (void)netdev;
-
-    *((gnrc_nettype_t *)value) = GNRC_NETTYPE_SIXLOWPAN;
-    return sizeof(gnrc_nettype_t);
-}
-
-
-static int _get_netdev_max_packet_size(netdev_t *netdev, void *value,
-                                       size_t max_len)
-{
-    assert(max_len == sizeof(uint16_t));
-    (void)netdev;
-
-    *((uint16_t *)value) = IEEE802154_MAX_FRAG_SIZE;
-    return sizeof(uint16_t);
-}
-
-static int _get_netdev_src_len(netdev_t *netdev, void *value, size_t max_len)
-{
-    (void)netdev;
-    assert(max_len == sizeof(uint16_t));
-    *((uint16_t *)value) = sizeof(_ieee802154_local_eui64);
-    return sizeof(uint16_t);
-}
-
-static int _get_netdev_addr_long(netdev_t *netdev, void *value, size_t max_len)
-{
-    (void)netdev;
-    assert(max_len >= sizeof(_ieee802154_local_eui64));
-    memcpy(value, _ieee802154_local_eui64, sizeof(_ieee802154_local_eui64));
-    return sizeof(_ieee802154_local_eui64);
-}
-
-
-static void test_get_next_hop_l2addr__link_local_EHOSTUNREACH(void)
-{
-    gnrc_ipv6_nib_nc_t nce;
-
-    printf("la salida es :%d\n" , gnrc_ipv6_nib_get_next_hop_l2addr(&_rem_ll, NULL, NULL, &nce));
-    msg_avail();
-    gnrc_pktbuf_is_empty();
-}
-
 
 // static void _send_packet(void)
 // {

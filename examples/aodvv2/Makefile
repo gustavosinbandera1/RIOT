@@ -32,17 +32,22 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   # gnrc is a meta module including all required, basic gnrc networking modules
   USEMODULE += gnrc
   # use the default network interface for the board
-  #USEMODULE += gnrc_netdev_default
+  USEMODULE += gnrc_netdev_default
   # automatically initialize the network interface
-  #USEMODULE += auto_init_gnrc_netif
+  USEMODULE += auto_init_gnrc_netif
+  #for basic IPV6 and 6loWPAN functionallities
+  #USEMODULE += gnrc_ipv6_default 
+
+  USEMODULE += gnrc_ipv6_router
+
 
 
   # the application dumps received packets to stdout
-  USEMODULE += gnrc_pktdump
+  #USEMODULE += gnrc_pktdump
 
-  USEMODULE += gnrc_ipv6 #All networking modules are loaded
 
-  USEMODULE += gnrc_ipv6_router
+
+  # USEMODULE += gnrc_ipv6_router
   
   # Import posix sockets
   USEMODULE += gnrc_sock_udp
@@ -53,19 +58,22 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   USEMODULE += timex
 
 
-  # use IEEE 802.15.4 as link-layer protocol
-USEMODULE += netdev_ieee802154
-USEMODULE += netdev_test
+
+
+
+# use IEEE 802.15.4 as link-layer protocol
+# USEMODULE += netdev_ieee802154
+# USEMODULE += netdev_test
 
 
 
 #neighbord discovery
-USEMODULE += gnrc_ipv6
-USEMODULE += gnrc_sixlowpan
-USEMODULE += gnrc_sixlowpan_ctx
-USEMODULE += gnrc_ipv6_nib_6ln
-USEMODULE += gnrc_netif
-USEMODULE += embunit
+# USEMODULE += gnrc_ipv6
+# USEMODULE += gnrc_sixlowpan
+# USEMODULE += gnrc_sixlowpan_ctx
+# USEMODULE += gnrc_ipv6_nib_6ln
+# USEMODULE += gnrc_netif
+# USEMODULE += embunit
 
 
 
