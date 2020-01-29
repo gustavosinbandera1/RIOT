@@ -563,18 +563,18 @@ gnrc_netreg_register(GNRC_NETTYPE_UDP, &dns_handler);
 
 ## GNRC basico ethernet
 
-![alt text](pic_examples/eth.png "GNRC")
+![alt text](pictures/eth.png "GNRC")
 
 ## GNRC basico 802154
-![alt text](pic_examples/802154.png "GNRC")
+![alt text](pictures/802154.png "GNRC")
 
 ## Adicionando una aplicacion simple
 
-![alt text](pic_examples/app.png "GNRC")
+![alt text](pictures/app.png "GNRC")
 
 
 ## ejemplo GNRC networking
 
-![alt text](pic_examples/app.png "GNRC")
+![alt text](pictures/app.png "GNRC")
 
 
