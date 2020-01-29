@@ -5,28 +5,28 @@
 
 #define ENABLE_DEBUG (1)
 #include "debug.h"
-
-#include "thread.h"
-#include "shell.h"
-#include "shell_commands.h"
-#include "msg.h"
+#include <inttypes.h>
 
 #include "aodvv2/aodvv2.h"
-#include "writer.h"
 #include "routingtable.h"
 
 
 #include "shell.h"
-#include "shell_commands.h"
+#include "msg.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#include "udp.h"
-#include "byteorder.h"
 
-#include "net/gnrc/netif.h"
+//#include "udp.h"
+//#include "byteorder.h"
+
+//#include "net/gnrc/netif.h"
+
+
+
+
 
 #define RANDOM_PORT         (1337)
 #define UDP_BUFFER_SIZE     (128)
@@ -43,7 +43,7 @@ static int _sock_snd;
 struct sockaddr_in6 _sockaddr;
 
 msg_t msg_q[RCV_MSG_Q_SIZE];
-gnrc_netif_t *ieee802154_netif;
+//gnrc_netif_t *ieee802154_netif;
 
 char _rcv_stack_buf[THREAD_STACKSIZE_MAIN];
 
@@ -105,17 +105,47 @@ static void *_demo_receiver_thread(void *arg)
 {
     (void)arg;
 
-    uint32_t fromlen;
-    int32_t rcv_size;
-    char buf_rcv[UDP_BUFFER_SIZE];
-    char addr_str_rec[IPV6_ADDR_MAX_STR_LEN];
+    // uint32_t fromlen;
+    // int32_t rcv_size;
+    // char buf_rcv[UDP_BUFFER_SIZE];
+    // char addr_str_rec[IPV6_ADDR_MAX_STR_LEN];
     msg_t rcv_msg_q[RCV_MSG_Q_SIZE];
 
-    
+
     // timex_t _now2;
 
     msg_init_queue(rcv_msg_q, RCV_MSG_Q_SIZE);
+    //struct sockaddr sa_rcv;
+    struct sockaddr_in6 sa_rcv;
+    sa_rcv.sin6_family = AF_INET;
+    sa_rcv.sin6_port = htons(RANDOM_PORT);
+    int sock_rcv = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
 
-   
+    if(sock_rcv > 0) {
+       puts("success initializing socket\n");
+    } else {
+       puts("errors initializing socket\n");
+    }
+
+    if (-1 == bind(sock_rcv,(struct sockaddr*)&sa_rcv, sizeof(sa_rcv))) {
+         DEBUG("[demo]   Error: bind to receive socket failed!\n");
+         close(sock_rcv);
+         
+     }
+
+    DEBUG("[demo]   ready to receive data\n");
+    // for(;;) {
+    //     rcv_size = socket_base_recvfrom(sock_rcv, (void *)buf_rcv, UDP_BUFFER_SIZE, 0,
+    //                                       &sa_rcv, &fromlen);
+
+    //     vtimer_now(&_now2);
+
+    //     if(rcv_size < 0) {
+    //         DEBUG("{%" PRIu32 ":%" PRIu32 "}[demo]   ERROR receiving data!\n", _now2.seconds, _now2.microseconds);
+    //     }
+    //     DEBUG("{%" PRIu32 ":%" PRIu32 "}[demo]   UDP packet received from %s: %s\n", _now2.seconds, _now2.microseconds, ipv6_addr_to_str(addr_str_rec, IPV6_MAX_ADDR_STR_LEN, &sa_rcv.sin6_addr), buf_rcv);
+    // }
+
+    // socket_base_close(sock_rcv);
     return NULL;
 }

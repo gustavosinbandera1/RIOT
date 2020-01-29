@@ -12,10 +12,7 @@ DEVELHELP ?= 1
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1
 
-# Modules to include:
-USEMODULE += shell
-USEMODULE += shell_commands
-USEMODULE += ps
+
 
 USEPKG += oonf_api
 USEMODULE += oonf_rfc5444 
@@ -36,9 +33,9 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   # automatically initialize the network interface
   USEMODULE += auto_init_gnrc_netif
   #for basic IPV6 and 6loWPAN functionallities
-  #USEMODULE += gnrc_ipv6_default 
+  USEMODULE += gnrc_ipv6_default 
 
-  USEMODULE += gnrc_ipv6_router
+  #USEMODULE += gnrc_ipv6_router
 
 
 
@@ -50,12 +47,20 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   # USEMODULE += gnrc_ipv6_router
   
   # Import posix sockets
-  USEMODULE += gnrc_sock_udp
-  USEMODULE += posix_sockets
-  USEMODULE += posix_inet
+USEMODULE += gnrc_udp
+USEMODULE += gnrc_sock_udp
+USEMODULE += posix_sockets
+USEMODULE += posix_inet
+USEMODULE += posix_time
 
-  USEMODULE += xtimer
-  USEMODULE += timex
+USEMODULE += xtimer
+USEMODULE += timex
+
+
+# Add also the shell, some shell commands
+USEMODULE += shell
+USEMODULE += shell_commands
+USEMODULE += ps
 
 
 
