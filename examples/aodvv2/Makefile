@@ -67,8 +67,8 @@ USEMODULE += ps
 
 
 # use IEEE 802.15.4 as link-layer protocol
-# USEMODULE += netdev_ieee802154
-# USEMODULE += netdev_test
+ USEMODULE += netdev_ieee802154
+ USEMODULE += netdev_test
 
 
 
