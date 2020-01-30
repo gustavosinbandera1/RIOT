@@ -63,6 +63,8 @@ static void *_server_thread(void *args)
         server_socket = 0;
         return NULL;
     }
+
+    
     if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         server_socket = -1;
         puts("error binding socket");
