@@ -38,7 +38,7 @@
 
 #include "net/gnrc/ipv6.h"
 
-#define ENABLE_DEBUG    (0)
+#define ENABLE_DEBUG    (1)
 #include "debug.h"
 
 #define _MAX_L2_ADDR_LEN    (8U)
@@ -644,6 +644,7 @@ static void _send(gnrc_pktsnip_t *pkt, bool prep_hdr)
 
     /* get IPv6 snip and (if present) generic interface header */
     if (pkt->type == GNRC_NETTYPE_NETIF) {
+        DEBUG("ipv6: packet type = GNRC_NETTYPE_NETIF\n");
         /* If there is already a netif header (routing protocols and
          * neighbor discovery might add them to preset sending interface or
          * higher layers wants to provide flags to the interface ) */
