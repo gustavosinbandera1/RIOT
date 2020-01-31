@@ -49,6 +49,9 @@
 #include "thread.h"
 #include "net/gnrc/udp.h"
 
+#include "net/gnrc/icmpv6/error.h"
+#include "net/inet_csum.h"
+
 static gnrc_netif_t *ieee802154_netif = NULL;
 
 #define _MSG_QUEUE_SIZE (2)
@@ -188,6 +191,112 @@ void aodv_init(void) {
   // ipv6_iface_set_routing_provider(aodv_get_next_hop);
 }
 
+static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
+                           gnrc_pktsnip_t *payload)
+{
+    uint16_t csum = 0;
+    uint16_t len = (uint16_t)hdr->size;
+
+    /* process the payload */
+    while (payload && payload != hdr && payload != pseudo_hdr) {
+        csum = inet_csum_slice(csum, (uint8_t *)(payload->data), payload->size, len);
+        len += (uint16_t)payload->size;
+        payload = payload->next;
+    }
+    /* process applicable UDP header bytes */
+    csum = inet_csum(csum, (uint8_t *)hdr->data, sizeof(udp_hdr_t));
+
+    switch (pseudo_hdr->type) {
+#ifdef MODULE_GNRC_IPV6
+        case GNRC_NETTYPE_IPV6:
+            csum = ipv6_hdr_inet_csum(csum, pseudo_hdr->data, PROTNUM_UDP, len);
+            break;
+#endif
+        default:
+            (void)len;
+            return 0;
+    }
+    /* return inverted results */
+    if (csum == 0xFFFF) {
+        /* https://tools.ietf.org/html/rfc8200#section-8.1
+         * bullet 4
+         * "if that computation yields a result of zero, it must be changed
+         * to hex FFFF for placement in the UDP header."
+         */
+        return 0xFFFF;
+    } else {
+        return ~csum;
+    }
+}
+
+
+
+
+static void _receive(gnrc_pktsnip_t *pkt)
+{
+    gnrc_pktsnip_t *udp, *ipv6;
+    udp_hdr_t *hdr;
+    uint32_t port;
+
+    /* mark UDP header */
+    udp = gnrc_pktbuf_start_write(pkt);
+    if (udp == NULL) {
+        DEBUG("udp: unable to get write access to packet\n");
+        gnrc_pktbuf_release(pkt);
+        return;
+    }
+    pkt = udp;
+
+    ipv6 = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_IPV6);
+
+    assert(ipv6 != NULL);
+
+    if ((pkt->next != NULL) && (pkt->next->type == GNRC_NETTYPE_UDP) &&
+        (pkt->next->size == sizeof(udp_hdr_t))) {
+        /* UDP header was already marked. Take it. */
+        udp = pkt->next;
+    }
+    else {
+        udp = gnrc_pktbuf_mark(pkt, sizeof(udp_hdr_t), GNRC_NETTYPE_UDP);
+        if (udp == NULL) {
+            DEBUG("udp: error marking UDP header, dropping packet\n");
+            gnrc_pktbuf_release(pkt);
+            return;
+        }
+    }
+    /* mark payload as Type: UNDEF */
+    pkt->type = GNRC_NETTYPE_UNDEF;
+    /* get explicit pointer to UDP header */
+    hdr = (udp_hdr_t *)udp->data;
+
+    /* validate checksum */
+    if (byteorder_ntohs(hdr->checksum) == 0) {
+        /* RFC 8200 Section 8.1
+         * "IPv6 receivers must discard UDP packets containing a zero checksum,
+         * and should log the error."
+         */
+        DEBUG("udp: received packet with zero checksum, dropping it\n");
+        gnrc_pktbuf_release(pkt);
+        return;
+    }
+    if (_calc_csum(udp, ipv6, pkt) != 0xFFFF) {
+        DEBUG("udp: received packet with invalid checksum, dropping it\n");
+        gnrc_pktbuf_release(pkt);
+        return;
+    }
+
+    /* get port (netreg demux context) */
+    port = (uint32_t)byteorder_ntohs(hdr->dst_port);
+
+    /* send payload to receivers */
+    if (!gnrc_netapi_dispatch_receive(GNRC_NETTYPE_UDP, port, pkt)) {
+        DEBUG("udp: unable to forward packet as no one is interested in it\n");
+        /* TODO determine if IPv6 packet, when IPv4 is implemented */
+        gnrc_icmpv6_error_dst_unr_send(ICMPV6_ERROR_DST_UNR_PORT, pkt);
+        gnrc_pktbuf_release(pkt);
+    }
+}
+
 
 
 static void *_event_loop(void *arg)
@@ -211,7 +320,7 @@ static void *_event_loop(void *arg)
         switch (msg.type) {
             case GNRC_NETAPI_MSG_TYPE_RCV:
                 DEBUG("<-----AODV---->: GNRC_NETAPI_MSG_TYPE_RCV\n");
-               // _receive(msg.content.ptr);
+                _receive(msg.content.ptr);
                 break;
             case GNRC_NETAPI_MSG_TYPE_SND:
                 DEBUG("<----AODB---->: GNRC_NETAPI_MSG_TYPE_SND\n");
@@ -258,6 +367,8 @@ void aodv_send_rreq(struct aodvv2_packet_data *packet_data) {
 
   msg_try_send(&msg, sender_thread);
 }
+
+
 
 /* void aodv_send_rrep(struct aodvv2_packet_data *packet_data, struct netaddr
 *next_hop)
