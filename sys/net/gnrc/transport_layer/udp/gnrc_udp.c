@@ -304,11 +304,14 @@ gnrc_pktsnip_t *gnrc_udp_hdr_build(gnrc_pktsnip_t *payload, uint16_t src,
 
 int gnrc_udp_init(void)
 {
-    /* check if thread is already running */
-    if (_pid == KERNEL_PID_UNDEF) {
-        /* start UDP thread */
-        _pid = thread_create(_stack, sizeof(_stack), GNRC_UDP_PRIO,
-                             THREAD_CREATE_STACKTEST, _event_loop, NULL, "udp");
-    }
-    return _pid;
+    // /* check if thread is already running */
+    // if (_pid == KERNEL_PID_UNDEF) {
+    //     /* start UDP thread */
+    //     _pid = thread_create(_stack, sizeof(_stack), GNRC_UDP_PRIO,
+    //                          THREAD_CREATE_STACKTEST, _event_loop, NULL, "udp");
+    // }
+    // return _pid;
+    (void)_pid;
+    (void)_stack;
+    return 0;
 }

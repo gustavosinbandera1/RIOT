@@ -230,7 +230,63 @@ static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
 }
 
 
+static void _send(gnrc_pktsnip_t *pkt)
+{
+    udp_hdr_t *hdr;
+    gnrc_pktsnip_t *udp_snip, *tmp;
+    gnrc_nettype_t target_type = pkt->type;
 
+     DEBUG("AODV---- _send(packet)\n");
+    /* write protect first header */
+    tmp = gnrc_pktbuf_start_write(pkt);
+    if (tmp == NULL) {
+        DEBUG("AODV: cannot send packet: unable to allocate packet\n");
+        gnrc_pktbuf_release(pkt);
+        return;
+    }
+    pkt = tmp;
+    udp_snip = tmp->next;
+
+    /* get and write protect until udp snip */
+    while ((udp_snip != NULL) && (udp_snip->type != GNRC_NETTYPE_UDP)) {
+        udp_snip = gnrc_pktbuf_start_write(udp_snip);
+        if (udp_snip == NULL) {
+            DEBUG("AODV: cannot send packet: unable to allocate packet\n");
+            gnrc_pktbuf_release(pkt);
+            return;
+        }
+        tmp->next = udp_snip;
+        tmp = udp_snip;
+        udp_snip = udp_snip->next;
+    }
+
+    assert(udp_snip != NULL);
+
+    /* write protect UDP snip */
+    udp_snip = gnrc_pktbuf_start_write(udp_snip);
+    if (udp_snip == NULL) {
+        DEBUG("AODV: cannot send packet: unable to allocate packet\n");
+        gnrc_pktbuf_release(pkt);
+        return;
+    }
+    tmp->next = udp_snip;
+    hdr = (udp_hdr_t *)udp_snip->data;
+    /* fill in size field */
+    hdr->length = byteorder_htons(gnrc_pkt_len(udp_snip));
+
+    /* set to IPv6, if first header is netif header */
+    if (target_type == GNRC_NETTYPE_NETIF) {
+        target_type = pkt->next->type;
+    }
+
+    /* and forward packet to the network layer */
+        DEBUG("AODV: enviando paquete a la network layer!!!\n");
+    if (!gnrc_netapi_dispatch_send(target_type, GNRC_NETREG_DEMUX_CTX_ALL,
+                                   pkt)) {
+        DEBUG("AODV: cannot send packet: network layer not found\n");
+        gnrc_pktbuf_release(pkt);
+    }
+}
 
 static void _receive(gnrc_pktsnip_t *pkt)
 {
@@ -319,12 +375,12 @@ static void *_event_loop(void *arg)
         msg_receive(&msg);
         switch (msg.type) {
             case GNRC_NETAPI_MSG_TYPE_RCV:
-                DEBUG("<-----AODV---->: GNRC_NETAPI_MSG_TYPE_RCV\n");
+                DEBUG("<-----AODV--loop-->: GNRC_NETAPI_MSG_TYPE_RCV\n");
                 _receive(msg.content.ptr);
                 break;
             case GNRC_NETAPI_MSG_TYPE_SND:
-                DEBUG("<----AODB---->: GNRC_NETAPI_MSG_TYPE_SND\n");
-               //_send(msg.content.ptr);
+                DEBUG("<----AODB--loop---->: GNRC_NETAPI_MSG_TYPE_SND\n");
+               _send(msg.content.ptr);
                 break;
             case GNRC_NETAPI_MSG_TYPE_SET:
             case GNRC_NETAPI_MSG_TYPE_GET:
@@ -369,61 +425,6 @@ void aodv_send_rreq(struct aodvv2_packet_data *packet_data) {
 }
 
 
-
-/* void aodv_send_rrep(struct aodvv2_packet_data *packet_data, struct netaddr
-*next_hop)
-{
-    AODV_DEBUG("%s()\n", __func__);
-
-    struct aodvv2_packet_data *pd = malloc(sizeof(struct aodvv2_packet_data));
-    memcpy(pd, packet_data, sizeof(struct aodvv2_packet_data));
-
-    struct netaddr *nh = malloc(sizeof(struct netaddr));
-    memcpy(nh, next_hop, sizeof(struct netaddr));
-
-    struct rreq_rrep_data *rd = malloc(sizeof(struct rreq_rrep_data));
-    *rd = (struct rreq_rrep_data) {
-        .next_hop = nh,
-        .packet_data = pd,
-    };
-
-    struct msg_container *mc = malloc(sizeof(struct msg_container));
-    *mc = (struct msg_container) {
-        .type = RFC5444_MSGTYPE_RREP,
-        .data = rd
-    };
-
-    msg_t msg;
-    msg.content.ptr = (char *) mc;
-
-    msg_try_send(&msg, sender_thread);
-} */
-
-/* void aodv_send_rerr(struct unreachable_node unreachable_nodes[], size_t len,
-struct netaddr *next_hop)
-{
-    AODV_DEBUG("%s()\n", __func__);
-
-    struct rerr_data *rerrd = malloc(sizeof(struct rerr_data));
-    *rerrd = (struct rerr_data) {
-        .unreachable_nodes = unreachable_nodes,
-        .len = len,
-        .hoplimit = AODVV2_MAX_HOPCOUNT,
-        .next_hop = next_hop
-    };
-
-    struct msg_container *mc2 = malloc(sizeof(struct msg_container));
-    *mc2 = (struct msg_container) {
-        .type = RFC5444_MSGTYPE_RERR,
-        .data = rerrd
-    };
-
-    msg_t msg2;
-    msg2.content.ptr = (char *) mc2;
-
-    msg_try_send(&msg2, sender_thread);
-} */
-
 //  init the multicast address all RREQ and RERRS are sent to
 //   and the local address (source address) of this node
 
@@ -436,20 +437,6 @@ static void _init_addresses(void) {
 
   DEBUG("my src address is:       %s\n",
         ipv6_addr_to_str(addr_str, &_v6_addr_local, IPV6_ADDR_MAX_STR_LEN));
-  /*//get best IP for sending
-  ipv6_net_if_get_best_src_addr(&_v6_addr_local, &_v6_addr_mcast);
-  AODV_DEBUG("my src address is:       %s\n",
-        ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_local));
-
-  //  store src & multicast address as netaddr as well for easy interaction
-  //  with oonf based stuff
-  ipv6_addr_t_to_netaddr(&_v6_addr_local, &na_local);
-  ipv6_addr_t_to_netaddr(&_v6_addr_mcast, &na_mcast);
-  ipv6_addr_set_loopback_addr(&_v6_addr_loopback);
-
-  //init sockaddr that write_packet will use to send data
-  sa_wp.sin6_family = AF_INET6;
-  sa_wp.sin6_port = HTONS(MANET_PORT); */
 }
 
 // init socket communication for sender
@@ -473,7 +460,7 @@ static void *_aodv_sender_thread(void *arg) {
     DEBUG("%s()\n", __func__);
     msg_t msg;
     msg_receive(&msg);
-    DEBUG("TESTING: RECIVIENDO MENSAJE\n");
+    DEBUG("AODV SENDER THREAD--------->>>>\n");
     struct msg_container *mc = (struct msg_container *)msg.content.ptr;
 
     if (mc->type == RFC5444_MSGTYPE_RREQ) {
@@ -534,172 +521,19 @@ static void *_aodv_receiver_thread(void *arg) {
     } else if (res == 0) {
       puts("Peer did shut down");
     } else {
-      printf("<AODV.C>Received data: >>>>>>>>>>>>>>> ");
+      printf("<AODV RECEIVER THREAD >Received data: >>>>>>>>>>>>>>> ");
       close(_socket);
       puts(buf_rcv);
 
     }
   }
 
-  // sockaddr6_t sa_rcv = { .sin6_family = AF_INET6,
-  //                        .sin6_port = HTONS(MANET_PORT)
-  //                      };
-
-  // int sock_rcv = socket_base_socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-
-  // if (-1 == socket_base_bind(sock_rcv, &sa_rcv, sizeof(sa_rcv))) {
-  //     DEBUG("Error: bind to receive socket failed!\n");
-  //     socket_base_close(sock_rcv);
-  // }
-
-  // AODV_DEBUG("ready to receive data\n");
-  // while (true) {
-  //     int32_t rcv_size = socket_base_recvfrom(sock_rcv, (void *)buf_rcv,
-  //     UDP_BUFFER_SIZE, 0,
-  //                                     &sa_rcv, &fromlen);
-
-  //     if (rcv_size < 0) {
-  //         AODV_DEBUG("ERROR receiving data!\n");
-  //     }
-
-  //     AODV_DEBUG("_aodv_receiver_thread() %s:",
-  //           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN,
-  //           &_v6_addr_local));
-  //     DEBUG(" UDP packet received from %s\n",
-  //           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN,
-  //           &sa_rcv.sin6_addr));
-
-  //     struct netaddr _sender;
-  //     ipv6_addr_t_to_netaddr(&sa_rcv.sin6_addr, &_sender);
-
-  //     // For some reason we sometimes get passed our own packets. drop them.
-  //     if (netaddr_cmp(&_sender, &na_local) == 0) {
-  //         AODV_DEBUG("received our own packet, dropping it.\n");
-  //         aodv_packet_reader_handle_packet((void *) buf_rcv, rcv_size,
-  //         &_sender);
-  //     }
-  // }
-
-  // socket_base_close(sock_rcv);
+  
 
   return NULL;
 }
 
-/* ipv6_addr_t *aodv_get_next_hop(ipv6_addr_t *dest)
-{
-    AODV_DEBUG("aodv_get_next_hop() %s:",
-          ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, &_v6_addr_local));
-    DEBUG(" getting next hop for %s\n",
-          ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, dest));
 
-    struct netaddr _tmp_dest;
-    ipv6_addr_t_to_netaddr(dest, &_tmp_dest);
-    timex_t now;
-    struct unreachable_node unreachable_nodes[AODVV2_MAX_UNREACHABLE_NODES];
-    size_t len;
-
-    // The network stack sometimes asks us for the next hop towards our own IP
-    if (memcmp(dest, &_v6_addr_local, sizeof(ipv6_addr_t)) == 0) {
-        AODV_DEBUG("That's me, returning loopback\n");
-        return &_v6_addr_loopback;
-    }
-
-
-    //   TODO use ndp_neighbor_get_ll_address() as soon as it's available.
-    //   note: delete check for active/stale/delayed entries, get_ll_address
-    //   does that for us then
-
-    ndp_neighbor_cache_t *ndp_nc_entry = ndp_neighbor_cache_search(dest);
-    struct aodvv2_routing_entry_t *rt_entry = routingtable_get_entry(&_tmp_dest,
-_metric_type);
-
-    if (ndp_nc_entry != NULL) {
-        // Case 2: Broken Link (detected by lower layer)
-        int link_broken = (ndp_nc_entry->state == NDP_NCE_STATUS_INCOMPLETE ||
-                           ndp_nc_entry->state == NDP_NCE_STATUS_PROBE) &&
-                          (rt_entry != NULL && rt_entry->state !=
-ROUTE_STATE_BROKEN);
-
-        if (link_broken) {
-            DEBUG("\tNeighbor Cache entry found, but invalid (state: %i).
-Sending RERR.\n", ndp_nc_entry->state);
-
-            //  mark all routes (active, idle, expired) that use next_hop as
-broken
-            //   and add all *Active* routes to the list of unreachable nodes
-            routingtable_break_and_get_all_hopping_over(&_tmp_dest,
-unreachable_nodes, &len);
-
-            aodv_send_rerr(unreachable_nodes, len, &na_mcast);
-            return NULL;
-        }
-
-        DEBUG("[aodvv2][ndp] found NC entry. Returning dest addr.\n");
-        return dest;
-    }
-    DEBUG("\t[ndp] no entry for addr %s found\n",
-          ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, dest));
-
-    if (rt_entry) {
-        //Case 1: Undeliverable Packet
-        int packet_indeliverable = rt_entry->state == ROUTE_STATE_BROKEN ||
-                                   rt_entry->state == ROUTE_STATE_EXPIRED;
-        if (packet_indeliverable) {
-            DEBUG("\tRouting table entry found, but invalid (state %i). Sending
-RERR.\n", rt_entry->state); unreachable_nodes[0].addr = _tmp_dest;
-            unreachable_nodes[0].seqnum = rt_entry->seqnum;
-            aodv_send_rerr(unreachable_nodes, 1, &na_mcast);
-            return NULL;
-        }
-
-        DEBUG("\tfound dest %s in routing table\n",
-              ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, dest));
-
-        vtimer_now(&now);
-        rt_entry->lastUsed = now;
-        if (rt_entry->state == ROUTE_STATE_IDLE) {
-            rt_entry->state = ROUTE_STATE_ACTIVE;
-        }
-
-        //  Currently, there is no way to do this, so I'm doing it the worst
-        //   possible, but safe way: I can't make sure that the current call to
-        //   aodv_get_next_hop() is overridden by another call to
-aodv_get_next_hop()
-        //   by a thread with higher priority, thus messing up return values if
-I just
-        //   use a static ipv6_addr_t.
-        //   The following malloc will never be free()'d. TODO: FIX THIS ASAP.
-
-        ipv6_addr_t *next_hop = (ipv6_addr_t *) malloc(sizeof(ipv6_addr_t));
-        netaddr_to_ipv6_addr_t(&rt_entry->nextHopAddr, next_hop);
-
-        return next_hop;
-    }
-
-    aodvv2_seqnum_t seqnum = seqnum_get();
-    seqnum_inc();
-
-    struct aodvv2_packet_data rreq_data = (struct aodvv2_packet_data) {
-        .hoplimit = AODVV2_MAX_HOPCOUNT,
-        .metricType = _metric_type,
-        .origNode = (struct node_data) {
-            .addr = na_local,
-            .metric = 0,
-            .seqnum = seqnum,
-        },
-        .targNode = (struct node_data) {
-            .addr = _tmp_dest,
-        },
-        .timestamp = (timex_t) {0,0} // this timestamp is never used, it exists
-                                      //merely to make the compiler shut up
-    };
-
-    DEBUG("\tNo route found towards %s, starting route discovery... \n",
-          ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, dest));
-    aodv_send_rreq(&rreq_data);
-
-    return NULL;
-} */
 
 /**
  * Handle the output of the RFC5444 packet creation process. This callback is

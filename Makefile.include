@@ -1,5 +1,4 @@
 MATCH_MAKE_VERSION = 4.%
-
 ifeq (,$(filter $(MATCH_MAKE_VERSION),$(MAKE_VERSION)))
   $(warning GNU Make $(MAKE_VERSION) is DEPRECATED in RIOT. Support for \
 	    versions less than $(MATCH_MAKE_VERSION) will be removed in \
