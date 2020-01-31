@@ -35,6 +35,8 @@ ifneq (,$(filter $(BOARD),$(BOARD_PROVIDES_NETIF)))
   #for basic IPV6 and 6loWPAN functionallities
   USEMODULE += gnrc_ipv6_default 
 
+  USEMODULE += gnrc_pktdump
+
   #USEMODULE += gnrc_ipv6_router
 
 

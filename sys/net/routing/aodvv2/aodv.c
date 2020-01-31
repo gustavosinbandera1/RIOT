@@ -47,6 +47,7 @@
 #include "net/gnrc/netif/internal.h"
 #include "sched.h"
 #include "thread.h"
+#include "net/gnrc/udp.h"
 
 static gnrc_netif_t *ieee802154_netif = NULL;
 
@@ -70,6 +71,7 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__((unused)),
                           struct rfc5444_writer_target *iface
                           __attribute__((unused)),
                           void *buffer, size_t length);
+static void *_event_loop(void *arg);
 
 // static void _send_packet(void);
 #ifdef ENABLE_DEBUG
@@ -77,6 +79,18 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__((unused)),
 char addr_str[IPV6_ADDR_MAX_STR_LEN];
 // static struct netaddr_str nbuf;
 #endif
+
+static kernel_pid_t _pid = KERNEL_PID_UNDEF;
+/**
+ * @brief   Allocate memory for the UDP thread's stack
+ */
+//#define GNRC_UDP_STACK_SIZE     (THREAD_STACKSIZE_DEFAULT)
+#if ENABLE_DEBUG
+static char _stack[GNRC_UDP_STACK_SIZE + THREAD_EXTRA_STACKSIZE_PRINTF];
+#else
+static char _stack[GNRC_UDP_STACK_SIZE];
+#endif
+
 
 // static char aodv_rcv_stack_buf[KERNEL_CONF_STACKSIZE_MAIN];
 // static char aodv_snd_stack_buf[KERNEL_CONF_STACKSIZE_MAIN];
@@ -111,7 +125,7 @@ void aodv_init(void) {
   // get netif interface
   ieee802154_netif = gnrc_netif_iter(ieee802154_netif);
   if (ieee802154_netif != NULL) {
-    DEBUG("tenemos una interface workaround: %d\n", ieee802154_netif->pid);
+    DEBUG("tenemos una interface: %d\n", ieee802154_netif->pid);
   }
 
   uint16_t temp;
@@ -147,6 +161,12 @@ void aodv_init(void) {
   aodv_packet_reader_init();
   aodv_packet_writer_init(_write_packet);
 
+   if (_pid == KERNEL_PID_UNDEF) {
+        /* start UDP thread */
+        _pid = thread_create(_stack, sizeof(_stack), GNRC_UDP_PRIO,
+                             THREAD_CREATE_STACKTEST, _event_loop, NULL, "udp");
+    }
+
   // TODO: set if_id properly
   /*int if_id = 0;
   net_if_set_src_address_mode(if_id, NET_IF_TRANS_ADDR_M_SHORT);*/
@@ -160,7 +180,7 @@ void aodv_init(void) {
 
   // DEBUG("listening on port %d\n", HTONS(MANET_PORT));
   sender_thread =
-      thread_create(aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf),
+    thread_create(aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf),
                     THREAD_PRIORITY_MAIN - 1, THREAD_CREATE_STACKTEST,
                     _aodv_sender_thread, NULL, "_aodv_sender_thread");
 
@@ -168,122 +188,48 @@ void aodv_init(void) {
   // ipv6_iface_set_routing_provider(aodv_get_next_hop);
 }
 
-// static void _send_packet(void)
-// {
-//     gnrc_netif_t *netif = gnrc_netif_iter(NULL);
-//     (void)netif;
-//     struct {
-//         gnrc_netif_hdr_t netif_hdr;
-//         uint8_t src[8];
-//         uint8_t dst[8];
-//     } netif_hdr = {
-//         .src = IEEE802154_REMOTE_EUI64,
-//         .dst = IEEE802154_LOCAL_EUI64,
-//     };
 
-//     gnrc_netif_hdr_init(&(netif_hdr.netif_hdr), 8, 8);
 
-//     gnrc_netif_hdr_set_netif(&netif_hdr.netif_hdr, netif);
+static void *_event_loop(void *arg)
+{
+    (void)arg;
+    msg_t msg, reply;
+    msg_t msg_queue[GNRC_UDP_MSG_QUEUE_SIZE];
+    gnrc_netreg_entry_t netreg = GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL,
+                                                            sched_active_pid);
+    /* preset reply message */
+    reply.type = GNRC_NETAPI_MSG_TYPE_ACK;
+    reply.content.value = (uint32_t)-ENOTSUP;
+    /* initialize message queue */
+    msg_init_queue(msg_queue, GNRC_UDP_MSG_QUEUE_SIZE);
+    /* register UPD at netreg */
+    gnrc_netreg_register(GNRC_NETTYPE_UDP, &netreg);
 
-//     uint8_t data1[] = {
-//         /* 6LoWPAN Header */
-//         /* Fragmentation Header (first) */
-//         0xc0, 0x94, /* 0b11000: frag1, 0b00010010100: datagram_size (148) */
-//         0x00, 0x01, /* datagram_tag */
-//         /* 0b011: LOWPAN_IPHC */
-//         /* 0b11: Traffic Class and Flow Label are elided */
-//         /* 0b1: Next Header is compressed */
-//         /* 0b11: The Hop Limit field is compressed and the hop limit is 255
-//         */ 0x7f,
-//         /* 0b0: No additional 8-bit Context Identifier Extension is used */
-//         /* 0b0: Source address compression uses stateless compression */
-//         /* 0b11: source address mode is 0 bits */
-//         /* 0b0: Destination address is not a multicast address */
-//         /* 0x0: Destination address compression uses stateless compression */
-//         /* 0x00: destination address mode is 128 bits */
-//         0x30,
+    /* dispatch NETAPI messages */
+    while (1) {
+        msg_receive(&msg);
+        switch (msg.type) {
+            case GNRC_NETAPI_MSG_TYPE_RCV:
+                DEBUG("<-----AODV---->: GNRC_NETAPI_MSG_TYPE_RCV\n");
+               // _receive(msg.content.ptr);
+                break;
+            case GNRC_NETAPI_MSG_TYPE_SND:
+                DEBUG("<----AODB---->: GNRC_NETAPI_MSG_TYPE_SND\n");
+               //_send(msg.content.ptr);
+                break;
+            case GNRC_NETAPI_MSG_TYPE_SET:
+            case GNRC_NETAPI_MSG_TYPE_GET:
+                msg_reply(&msg, &reply);
+                break;
+            default:
+                DEBUG("udp: received unidentified message\n");
+                break;
+        }
+    }
 
-//         /* destination address: fd01::1 */
-//         // 0xfd, 0x01, 0x00, 0x00,
-//         // 0x00, 0x00, 0x00, 0x00,
-//         // 0x00, 0x00, 0x00, 0x00,
-//         // 0x00, 0x00, 0x00, 0x01,
-
-//         0xff, 0x02, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x01,
-
-//         /* 0b11110: UDP LOWPAN_NHC */
-//         /* 0b0: Checksum is carried in-line */
-//         /* 0b11: First 12 bits of both Source Port and Destination Port are
-//         0xf0b and elided */ 0xf3, 0x00, /* Source Port and Destination Port
-//         (4 bits each) */ 0x23, 0x2f, /* Checksum */
-
-//         /* payload */
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//     };
-
-//     uint8_t data2[] = {
-//         /* 6LoWPAN Header */
-//         /* Fragmentation Header (rest) */
-//         0xe0, 0x94, /* 0b11100: frag1, 0b00010010100: datagram_size (148) */
-//         0x00, 0x01, /* datagram_tag */
-//         0x0c,       /* datagram_offset (12 * 8 = 96) */
-
-//         /* payload */
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-//         0x00, 0x00, 0x00, 0x00,
-//     };
-
-//     gnrc_netreg_entry_t dump_6lowpan =
-//     GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL, gnrc_pktdump_pid);
-//     gnrc_netreg_entry_t dump_ipv6 =
-//     GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL, gnrc_pktdump_pid);
-//     gnrc_netreg_entry_t dump_udp =
-//     GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL, gnrc_pktdump_pid);
-//     gnrc_netreg_entry_t dump_udp_61616 = GNRC_NETREG_ENTRY_INIT_PID(61616,
-//     gnrc_pktdump_pid);
-
-//     gnrc_netreg_register(GNRC_NETTYPE_SIXLOWPAN, &dump_6lowpan);
-//     gnrc_netreg_register(GNRC_NETTYPE_IPV6, &dump_ipv6);
-//     gnrc_netreg_register(GNRC_NETTYPE_UDP, &dump_udp);
-//     gnrc_netreg_register(GNRC_NETTYPE_UDP, &dump_udp_61616);
-
-//     gnrc_pktsnip_t *netif1 = gnrc_pktbuf_add(NULL,
-//                                             &netif_hdr,
-//                                             sizeof(netif_hdr),
-//                                             GNRC_NETTYPE_NETIF);
-//     gnrc_pktsnip_t *pkt1 = gnrc_pktbuf_add(netif1,
-//                                            data1,
-//                                            sizeof(data1),
-//                                            GNRC_NETTYPE_SIXLOWPAN);
-
-//     gnrc_netapi_dispatch_receive(GNRC_NETTYPE_SIXLOWPAN,
-//     GNRC_NETREG_DEMUX_CTX_ALL, pkt1);
-
-//     gnrc_pktsnip_t *netif2 = gnrc_pktbuf_add(NULL,
-//                                              &netif_hdr,
-//                                              sizeof(netif_hdr),
-//                                              GNRC_NETTYPE_NETIF);
-//     gnrc_pktsnip_t *pkt2 = gnrc_pktbuf_add(netif2,
-//                                            data2,
-//                                            sizeof(data2),
-//                                            GNRC_NETTYPE_SIXLOWPAN);
-
-//     gnrc_netapi_dispatch_receive(GNRC_NETTYPE_SIXLOWPAN,
-//     GNRC_NETREG_DEMUX_CTX_ALL, pkt2);
-// }
+    /* never reached */
+    return NULL;
+}
 
 void aodv_set_metric_type(aodvv2_metric_t metric_type) {
   if (metric_type != AODVV2_DEFAULT_METRIC_TYPE) {
@@ -478,6 +424,7 @@ static void *_aodv_receiver_thread(void *arg) {
       puts("Peer did shut down");
     } else {
       printf("<AODV.C>Received data: >>>>>>>>>>>>>>> ");
+      close(_socket);
       puts(buf_rcv);
 
     }

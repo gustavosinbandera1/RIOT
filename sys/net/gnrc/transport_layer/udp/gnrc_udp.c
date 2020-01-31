@@ -213,6 +213,7 @@ static void _send(gnrc_pktsnip_t *pkt)
     }
 
     /* and forward packet to the network layer */
+        DEBUG("udp: enviando paquete a la network layer!!!\n");
     if (!gnrc_netapi_dispatch_send(target_type, GNRC_NETREG_DEMUX_CTX_ALL,
                                    pkt)) {
         DEBUG("udp: cannot send packet: network layer not found\n");
