@@ -1,4 +1,3 @@
 CFLAGS += -Wno-unused-function
-MODULE = gnrc_udp
-
+MODULE = gnrc_aodvv2
 include $(RIOTBASE)/Makefile.base
