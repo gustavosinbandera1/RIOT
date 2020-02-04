@@ -1,3 +1,15 @@
+/**
+ * @file main.c
+ * @author Locha Mesh Developers (contact@locha.io)
+ * @brief Main firmware file
+ * @version 0.1
+ * @date 2020-02-02
+ * 
+ * @copyright Copyright (c) 2020 Locha Mesh project developers
+ * @license Apache 2.0, see LICENSE file for details
+ * 
+ */
+
 /*
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
@@ -20,11 +32,10 @@
 #ifndef AODV_H_
 #define AODV_H_
 
-
-#include "udp.h"
-#include "net/gnrc/aodvv2/types.h"
 #include "constants.h"
+#include "net/gnrc/aodvv2/types.h"
 #include "thread.h"
+#include "udp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,14 +44,13 @@ extern "C" {
 /**
  * @brief   This struct contains data which needs to be put into a RREQ or RREP.
  *          It is used to transport this data in a message to the sender_thread.
- * @note    Please note that it is for internal use only. To send a RREQ or RREP,
- *          please use the aodv_send_rreq() and aodv_send_rrep() functions.
+ * @note    Please note that it is for internal use only. To send a RREQ or
+ * RREP, please use the aodv_send_rreq() and aodv_send_rrep() functions.
  */
-struct rreq_rrep_data
-{
-    struct aodvv2_packet_data *packet_data;     /**< Data for the RREQ or RREP */
-    struct netaddr *next_hop;                   /**< Next hop to which the RREQ
-                                                 *   or RREP should be sent */
+struct rreq_rrep_data {
+  struct aodvv2_packet_data *packet_data; /**< Data for the RREQ or RREP */
+  struct netaddr *next_hop;               /**< Next hop to which the RREQ
+                                           *   or RREP should be sent */
 };
 
 /**
@@ -49,31 +59,29 @@ struct rreq_rrep_data
  * @note    Please note that it is for internal use only. To send a RERR,
  *          please use the aodv_send_rerr() function.
  */
-struct rerr_data
-{
-    struct unreachable_node *unreachable_nodes; /**< All unreachable nodes. Beware,
-                                                 *   this is the start of an array */
-    size_t len;                                 /**< Length of the unreachable_nodes array */
-    int hoplimit;                               /**< hoplimit for the RERR */
-    struct netaddr *next_hop;                   /**< Next hop to which the RERR
-                                                 *   should be sent */
+struct rerr_data {
+  struct unreachable_node
+      *unreachable_nodes;   /**< All unreachable nodes. Beware,
+                             *   this is the start of an array */
+  size_t len;               /**< Length of the unreachable_nodes array */
+  int hoplimit;             /**< hoplimit for the RERR */
+  struct netaddr *next_hop; /**< Next hop to which the RERR
+                             *   should be sent */
 };
-
 
 /**
  * @brief   This struct holds the data for a RREQ, RREP or RERR (contained
- *          in a rreq_rrep_data or rerr_data struct) and the next hop the RREQ, RREP
- *          or RERR should be sent to. It used for message communication with
- *          the sender_thread.
+ *          in a rreq_rrep_data or rerr_data struct) and the next hop the RREQ,
+ * RREP or RERR should be sent to. It used for message communication with the
+ * sender_thread.
  * @note    Please note that it is for internal use only. To send a RERR,
  *          please use the aodv_send_rerr() function.
  */
-struct msg_container
-{
-    int type;                                   /**< Message type (i.e. one of
-                                                 *   rfc5444_msg_type) */
-    void *data;                                 /**< Pointer to the message data
-                                                 * (i.e. rreq_rrep_data or rerr_data) */
+struct msg_container {
+  int type;   /**< Message type (i.e. one of
+               *   rfc5444_msg_type) */
+  void *data; /**< Pointer to the message data
+               * (i.e. rreq_rrep_data or rerr_data) */
 };
 
 /**
@@ -85,7 +93,7 @@ struct msg_container
  * @return          Address of the next hop towards dest if there is any,
  *                  NULL if there is none (yet)
  */
-//ipv6_addr_t *aodv_get_next_hop(ipv6_addr_t *dest);
+// ipv6_addr_t *aodv_get_next_hop(ipv6_addr_t *dest);
 
 /**
  * @brief   Dispatch a RREQ
@@ -100,7 +108,8 @@ void aodv_send_rreq(struct aodvv2_packet_data *packet_data);
  * @param[in] packet_data  Payload of the RREP
  * @param[in] next_hop     Address of the next hop the RREP should be sent to
  */
-void aodv_send_rrep(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop);
+void aodv_send_rrep(struct aodvv2_packet_data *packet_data,
+                    struct netaddr *next_hop);
 
 /**
  * @brief   Dispatch a RERR
@@ -108,12 +117,13 @@ void aodv_send_rrep(struct aodvv2_packet_data *packet_data, struct netaddr *next
  * @param[in] unreachable_nodes  All nodes that are marked as unreachable
  *                               by this RERR
  * @param[in] len                Number of unreachable nodes
- * @param[in] next_hop           Address of the next hop the RERR should be sent to
+ * @param[in] next_hop           Address of the next hop the RERR should be sent
+ * to
  */
 void aodv_send_rerr(struct unreachable_node unreachable_nodes[], size_t len,
                     struct netaddr *next_hop);
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 

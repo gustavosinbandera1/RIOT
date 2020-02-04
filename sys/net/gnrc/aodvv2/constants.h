@@ -1,3 +1,15 @@
+/**
+ * @file main.c
+ * @author Locha Mesh Developers (contact@locha.io)
+ * @brief Main firmware file
+ * @version 0.1
+ * @date 2020-02-02
+ * 
+ * @copyright Copyright (c) 2020 Locha Mesh project developers
+ * @license Apache 2.0, see LICENSE file for details
+ * 
+ */
+
 /*
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
@@ -28,33 +40,32 @@
 extern "C" {
 #endif
 
-#define MANET_PORT  269                 /** RFC5498 */
+#define MANET_PORT 269 /** RFC5498 */
 
 enum aodvv2_constants {
-    AODVV2_MAX_HOPCOUNT = 255,          /**< see AODVv2 draft, section 14.2.*/
-    AODVV2_MAX_ROUTING_ENTRIES = 8,   /**< maximum number of entries
-                                         *   in the routing table */
-    AODVV2_ACTIVE_INTERVAL = 5,         /**< seconds */
-    AODVV2_MAX_IDLETIME = 250,          /**< seconds */
-    AODVV2_MAX_SEQNUM_LIFETIME = 300,   /**< seconds */
-    AODVV2_MAX_UNREACHABLE_NODES = 15,  /**< TODO: choose value (wisely) */
+  AODVV2_MAX_HOPCOUNT = 255,         /**< see AODVv2 draft, section 14.2.*/
+  AODVV2_MAX_ROUTING_ENTRIES = 8,    /**< maximum number of entries
+                                      *   in the routing table */
+  AODVV2_ACTIVE_INTERVAL = 5,        /**< seconds */
+  AODVV2_MAX_IDLETIME = 250,         /**< seconds */
+  AODVV2_MAX_SEQNUM_LIFETIME = 300,  /**< seconds */
+  AODVV2_MAX_UNREACHABLE_NODES = 15, /**< TODO: choose value (wisely) */
 };
 
 /**
  * @brief   TLV type array indices
  */
-enum tlv_index
-{
-    TLV_ORIGSEQNUM,
-    TLV_TARGSEQNUM,
-    TLV_UNREACHABLE_NODE_SEQNUM,
-    TLV_METRIC,
+enum tlv_index {
+  TLV_ORIGSEQNUM,
+  TLV_TARGSEQNUM,
+  TLV_UNREACHABLE_NODE_SEQNUM,
+  TLV_METRIC,
 };
 
 /* my multicast address */
 extern struct netaddr na_mcast;
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 

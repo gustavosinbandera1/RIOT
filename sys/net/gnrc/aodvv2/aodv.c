@@ -1,3 +1,15 @@
+/**
+ * @file main.c
+ * @author Locha Mesh Developers (contact@locha.io)
+ * @brief Main firmware file
+ * @version 0.1
+ * @date 2020-02-02
+ * 
+ * @copyright Copyright (c) 2020 Locha Mesh project developers
+ * @license Apache 2.0, see LICENSE file for details
+ * 
+ */
+
 /*
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
@@ -28,25 +40,14 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-//#include "net/gnrc/netif/ieee802154.h"
-//#include "net/netdev_test.h"
-
 #include <stdio.h>
 
 #include "net/gnrc/netapi.h"
 #include "net/gnrc/netif.h"
 #include "net/gnrc/netif/conf.h"
-#include "net/gnrc/netreg.h"
-#include "net/gnrc/pkt.h"
-#include "net/gnrc/pktbuf.h"
-#include "net/ipv6/addr.h"
 
 #include "assert.h"
 #include "net/gnrc/udp.h"
-
-
-#include "net/gnrc/icmpv6/error.h"
-//#include "net/inet_csum.h"
 
 static gnrc_netif_t *ieee802154_netif = NULL;
 
@@ -107,7 +108,6 @@ void aodv_init(void) {
   }
 
   _init_sock_snd();
-
 }
 
 static void _send(gnrc_pktsnip_t *pkt) {
@@ -170,7 +170,7 @@ static void *_event_loop(void *arg) {
   msg_t msg, reply;
   msg_t msg_queue[GNRC_UDP_MSG_QUEUE_SIZE];
   gnrc_netreg_entry_t netreg =
-  GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL, sched_active_pid);
+      GNRC_NETREG_ENTRY_INIT_PID(GNRC_NETREG_DEMUX_CTX_ALL, sched_active_pid);
   /* preset reply message */
   reply.type = GNRC_NETAPI_MSG_TYPE_ACK;
   reply.content.value = (uint32_t)-ENOTSUP;

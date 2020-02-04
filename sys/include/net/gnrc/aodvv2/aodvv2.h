@@ -1,3 +1,15 @@
+/**
+ * @file main.c
+ * @author Locha Mesh Developers (contact@locha.io)
+ * @brief Main firmware file
+ * @version 0.1
+ * @date 2020-02-02
+ * 
+ * @copyright Copyright (c) 2020 Locha Mesh project developers
+ * @license Apache 2.0, see LICENSE file for details
+ * 
+ */
+
 /*
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
@@ -44,7 +56,7 @@ void aodv_init(void);
  */
 void aodv_set_metric_type(aodvv2_metric_t metric_type);
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 
