@@ -20,21 +20,10 @@
 #ifndef AODV_H_
 #define AODV_H_
 
-// #include <sixlowpan/ip.h>
-// #include "sixlowpan.h"
-// #include "kernel.h"
-#include "udp.h"
-// #include "socket_base/socket.h"
-// #include "net_help.h"
-//#include "net_if.h"
 
+#include "udp.h"
 #include "net/gnrc/aodvv2/types.h"
 #include "constants.h"
-#include "seqnum.h"
-//#include "routingtable.h"
-#include "utils.h"
-#include "reader.h"
-#include "writer.h"
 #include "thread.h"
 
 #ifdef __cplusplus
