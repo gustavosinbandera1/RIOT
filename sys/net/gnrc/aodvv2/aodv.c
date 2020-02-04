@@ -33,50 +33,35 @@
 
 #define ENABLE_DEBUG (1)
 #include "aodv.h"
-#include "aodvv2.h"
 #include "debug.h"
-
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-
 #include <stdio.h>
-
-#include "net/gnrc/netapi.h"
-#include "net/gnrc/netif.h"
-#include "net/gnrc/netif/conf.h"
-
 #include "assert.h"
 #include "net/gnrc/udp.h"
+#include "net/netdev_test.h"
+#include "writer.h"
 
+#define RCV_MSG_Q_SIZE (32) 
+
+static char aodv_snd_stack_buf[GNRC_UDP_STACK_SIZE];
 static gnrc_netif_t *ieee802154_netif = NULL;
 
-#define _MSG_QUEUE_SIZE (2)
-#define UDP_BUFFER_SIZE (128) /** with respect to IEEE 802.15.4's MTU */
-#define RCV_MSG_Q_SIZE (32)   /* TODO: check if smaller values work, too */
-#define IEEE802154_MAX_FRAG_SIZE (102)
-
-static void _init_sock_snd(void);
-static void *_event_loop(void *arg);
-
-#ifdef ENABLE_DEBUG
-char addr_str[IPV6_ADDR_MAX_STR_LEN];
-#endif
-
 static kernel_pid_t _pid = KERNEL_PID_UNDEF;
-/**
- * @brief   Allocate memory for the UDP thread's stack
- */
-//#define GNRC_UDP_STACK_SIZE     (THREAD_STACKSIZE_DEFAULT)
-#if ENABLE_DEBUG
-static char _stack[GNRC_UDP_STACK_SIZE + THREAD_EXTRA_STACKSIZE_PRINTF];
-#else
 static char _stack[GNRC_UDP_STACK_SIZE];
-#endif
 
+static int sender_thread;
 static int _sock_snd;
 struct netaddr na_mcast = (struct netaddr){};
 ipv6_addr_t ipv6_addrs = {0};
+
+static void _init_sock_snd(void);
+static void *_event_loop(void *arg);
+static void *_aodv_sender_thread(void *arg);
+
+
+
 
 void aodv_init(void) {
   DEBUG("listening on port \n");
@@ -107,63 +92,12 @@ void aodv_init(void) {
                          THREAD_CREATE_STACKTEST, _event_loop, NULL, "IPV6");
   }
 
+  sender_thread = thread_create(aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf),
+                                  THREAD_PRIORITY_MAIN-1, THREAD_CREATE_STACKTEST, _aodv_sender_thread,
+                                  NULL, "_aodv_sender_thread");
   _init_sock_snd();
 }
 
-static void _send(gnrc_pktsnip_t *pkt) {
-  udp_hdr_t *hdr;
-  gnrc_pktsnip_t *udp_snip, *tmp;
-  gnrc_nettype_t target_type = pkt->type;
-
-  /* write protect first header */
-  tmp = gnrc_pktbuf_start_write(pkt);
-  if (tmp == NULL) {
-    DEBUG("AODV: cannot send packet: unable to allocate packet\n");
-    gnrc_pktbuf_release(pkt);
-    return;
-  }
-  pkt = tmp;
-  udp_snip = tmp->next;
-  /* get and write protect until udp snip */
-  while ((udp_snip != NULL) && (udp_snip->type != GNRC_NETTYPE_UDP)) {
-    udp_snip = gnrc_pktbuf_start_write(udp_snip);
-    if (udp_snip == NULL) {
-      DEBUG("AODV: cannot send packet: unable to allocate packet\n");
-      gnrc_pktbuf_release(pkt);
-      return;
-    }
-    tmp->next = udp_snip;
-    tmp = udp_snip;
-    udp_snip = udp_snip->next;
-  }
-
-  assert(udp_snip != NULL);
-
-  /* write protect UDP snip */
-  udp_snip = gnrc_pktbuf_start_write(udp_snip);
-  if (udp_snip == NULL) {
-    DEBUG("AODV: cannot send packet: unable to allocate packet\n");
-    gnrc_pktbuf_release(pkt);
-    return;
-  }
-  tmp->next = udp_snip;
-  hdr = (udp_hdr_t *)udp_snip->data;
-  /* fill in size field */
-  hdr->length = byteorder_htons(gnrc_pkt_len(udp_snip));
-
-  /* set to IPv6, if first header is netif header */
-  if (target_type == GNRC_NETTYPE_NETIF) {
-    target_type = pkt->next->type;
-  }
-
-  /* and forward packet to the network layer */
-  DEBUG("AODV: Sending packet to the network layer!!!\n");
-  //*_event_loop gnrc_ipv6.c receiving the data
-  if (!gnrc_netapi_dispatch_send(target_type, GNRC_NETREG_DEMUX_CTX_ALL, pkt)) {
-    DEBUG("AODV: cannot send packet: network layer not found\n");
-    gnrc_pktbuf_release(pkt);
-  }
-}
 
 static void *_event_loop(void *arg) {
   (void)arg;
@@ -188,7 +122,7 @@ static void *_event_loop(void *arg) {
     case GNRC_NETAPI_MSG_TYPE_RCV:
       break;
     case GNRC_NETAPI_MSG_TYPE_SND:
-      _send(msg.content.ptr);
+     
       break;
     case GNRC_NETAPI_MSG_TYPE_SET:
     case GNRC_NETAPI_MSG_TYPE_GET:
@@ -210,4 +144,56 @@ static void _init_sock_snd(void) {
   if (_sock_snd < 0) {
     DEBUG("Error Creating Socket!\n");
   }
+}
+
+
+void aodv_send_rreq(struct aodvv2_packet_data *packet_data)
+{
+    struct aodvv2_packet_data *pd = malloc(sizeof(struct aodvv2_packet_data));
+    memcpy(pd, packet_data, sizeof(struct aodvv2_packet_data));
+
+    struct rreq_rrep_data *rd = malloc(sizeof(struct rreq_rrep_data));
+    *rd = (struct rreq_rrep_data) {
+        .next_hop = &na_mcast,
+        .packet_data = pd,
+    };
+
+    struct msg_container *mc = malloc(sizeof(struct msg_container));
+    *mc = (struct msg_container) {
+        .type = RFC5444_MSGTYPE_RREQ,
+        .data = rd
+    };
+
+    msg_t msg;
+    msg.content.ptr = (char *) mc;
+
+    msg_try_send(&msg, sender_thread);
+}
+
+
+// Build RREQs, RREPs and RERRs from the information contained in the thread's
+// message queue and send them
+static void *_aodv_sender_thread(void *arg) {
+  (void)arg;
+
+  msg_t msgq[RCV_MSG_Q_SIZE];
+  msg_init_queue(msgq, sizeof msgq);
+  DEBUG("_aodv_sender_thread initialized.\n");
+
+  while (true) {
+    DEBUG("%s()\n", __func__);
+    msg_t msg;
+    msg_receive(&msg);
+    DEBUG("AODV SENDER THREAD--------->>>>\n");
+    struct msg_container *mc = (struct msg_container *)msg.content.ptr;
+
+    if (mc->type == RFC5444_MSGTYPE_RREQ) {
+      struct rreq_rrep_data *rreq_data = (struct rreq_rrep_data *)mc->data;
+      aodv_packet_writer_send_rreq(rreq_data->packet_data, rreq_data->next_hop);
+    }  else {
+      DEBUG("ERROR: Couldn't identify Message\n");
+    }
+  }
+
+  return NULL;
 }

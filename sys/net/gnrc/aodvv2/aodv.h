@@ -32,6 +32,7 @@
 #ifndef AODV_H_
 #define AODV_H_
 
+
 #include "constants.h"
 #include "net/gnrc/aodvv2/types.h"
 #include "thread.h"
