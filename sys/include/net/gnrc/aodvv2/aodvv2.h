@@ -46,7 +46,7 @@ extern "C" {
 /**
  * @brief   Initialize the AODVv2 routing protocol.
  */
-void aodv_init(void);
+void gnrc_aodvv2_init(void);
 
 /**
  * @brief   Set the metric type. If metric_type does not match any known metric

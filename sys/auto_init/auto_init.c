@@ -102,7 +102,7 @@
 #endif
 #endif
 
-#define ENABLE_DEBUG (0)
+#define ENABLE_DEBUG (1)
 #include "debug.h"
 
 void auto_init(void)
@@ -143,8 +143,8 @@ void auto_init(void)
     gnrc_ipv6_init();
 #endif
 #ifdef MODULE_GNRC_UDP
-    DEBUG("Auto init UDP module.\n");
-    gnrc_udp_init();
+    //DEBUG("Auto init UDP module.\n");
+    //gnrc_udp_init();
 #endif
 #ifdef MODULE_GNRC_TCP
     DEBUG("Auto init TCP module\n");

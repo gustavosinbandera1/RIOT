@@ -103,27 +103,8 @@ struct msg_container {
  */
 void aodv_send_rreq(struct aodvv2_packet_data *packet_data);
 
-/**
- * @brief   Dispatch a RREP
- *
- * @param[in] packet_data  Payload of the RREP
- * @param[in] next_hop     Address of the next hop the RREP should be sent to
- */
-void aodv_send_rrep(struct aodvv2_packet_data *packet_data,
-                    struct netaddr *next_hop);
-
-/**
- * @brief   Dispatch a RERR
- *
- * @param[in] unreachable_nodes  All nodes that are marked as unreachable
- *                               by this RERR
- * @param[in] len                Number of unreachable nodes
- * @param[in] next_hop           Address of the next hop the RERR should be sent
- * to
- */
-void aodv_send_rerr(struct unreachable_node unreachable_nodes[], size_t len,
-                    struct netaddr *next_hop);
-
+static int udp_send(char *addr_str, char *port_str, char *data, unsigned int num,
+                    unsigned int delay);
 #ifdef __cplusplus
 }
 #endif
