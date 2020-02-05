@@ -121,7 +121,7 @@ _cb_rreq_addAddresses(struct rfc5444_writer *wr)
 
 
 
-void aodv_packet_writer_init(write_packet_func_ptr ptr)
+void gnrc_aodvv2_packet_writer_init(write_packet_func_ptr ptr)
 {
     mutex_init(&writer_mutex);
 
@@ -163,7 +163,7 @@ void aodv_packet_writer_init(write_packet_func_ptr ptr)
  * @param packet_data parameters of the RREQ
  * @param next_hop Address the RREP is sent to
  */
-void aodv_packet_writer_send_rreq(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop)
+void gnrc_aodvv2_packet_writer_send_rreq(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop)
 {
     
 

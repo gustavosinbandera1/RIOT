@@ -101,7 +101,7 @@ struct msg_container {
  *
  * @param[in] packet_data  Payload of the RREQ
  */
-void aodv_send_rreq(struct aodvv2_packet_data *packet_data);
+void gnrc_aodv_send_rreq(struct aodvv2_packet_data *packet_data);
 
 static int udp_send(char *addr_str, char *port_str, char *data, unsigned int num,
                     unsigned int delay);

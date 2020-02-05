@@ -71,7 +71,7 @@ typedef void (*write_packet_func_ptr)(
  * @brief   Initialize RFC5444 writer
  * @param ptr   pointer to "send_packet" callback
  */
-void aodv_packet_writer_init(write_packet_func_ptr ptr);
+void gnrc_aodvv2_packet_writer_init(write_packet_func_ptr ptr);
 
 /**
  * @brief   Clean up after the RFC5444 writer
@@ -84,7 +84,7 @@ void aodv_packet_writer_cleanup(void);
  * @param packet_data      parameters of the RREQ
  * @param next_hop Address the RREP is sent to
  */
-void aodv_packet_writer_send_rreq(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop);
+void gnrc_aodvv2_packet_writer_send_rreq(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop);
 
 
 #ifdef  __cplusplus
