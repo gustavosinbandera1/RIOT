@@ -62,8 +62,9 @@ static char _stack[GNRC_UDP_STACK_SIZE];
 
 static int sender_thread;
 static int _sock_snd;
+
 struct netaddr na_mcast = (struct netaddr){};
-ipv6_addr_t ipv6_addrs = {0};
+//ipv6_addr_t ipv6_addrs = {0};
 char addr_str[IPV6_ADDR_MAX_STR_LEN];
 static ipv6_addr_t _v6_addr_local, _v6_addr_mcast, _v6_addr_loopback;
 
@@ -75,6 +76,7 @@ static void _receive(gnrc_pktsnip_t *pkt);
 static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
                            gnrc_pktsnip_t *payload);
 static void gnrc_process_message(gnrc_pktsnip_t *pkt);
+ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif);
 
 
 
@@ -91,18 +93,7 @@ void gnrc_aodvv2_init(void) {
     DEBUG("interface: %d\n", ieee802154_netif->pid);
   }
 
-  // get ipv6 address
-  int r = gnrc_netapi_get(ieee802154_netif->pid, NETOPT_IPV6_ADDR, 0,
-                          &ipv6_addrs, sizeof(ipv6_addrs));
-  if (r < 0) {
-    return;
-  }
-
-  for (unsigned i = 0; i < (unsigned)(r / sizeof(ipv6_addr_t)); i++) {
-    char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
-    ipv6_addr_to_str(ipv6_addr, &ipv6_addrs, IPV6_ADDR_MAX_STR_LEN);
-    DEBUG("IPV6 address:  %s\n", ipv6_addr);
-  }
+  gnrc_get_ipv6_from_iface(ieee802154_netif);
 
   if (_pid == KERNEL_PID_UNDEF) {
     /* start thread */
@@ -116,7 +107,6 @@ void gnrc_aodvv2_init(void) {
                     gnrc_aodvv2_sender_thread, NULL, "gnrc_aodvv2_sender_thread");
   _init_sock_snd();
 }
-
 
 
 static void *_event_loop(void *arg) {
@@ -384,7 +374,7 @@ static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
 }
 
 static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
-  gnrc_pktsnip_t *udp_snip, *tmp_pkt;
+  gnrc_pktsnip_t *ipv6_snip, *udp_snip, *tmp_pkt;
   gnrc_netif_t *netif = NULL;
 
   DEBUG("AODV---- porcessing packet\n");
@@ -396,9 +386,10 @@ static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
     return;
   }
   pkt = tmp_pkt;
-  udp_snip = tmp_pkt->next;
+  ipv6_snip = tmp_pkt->next;
+  udp_snip = ipv6_snip->next;
+  (void)ipv6_snip;
   (void)udp_snip;
-
   DEBUG("debugeando: %d\n", (int)pkt->type);
   if (pkt->type == GNRC_NETTYPE_NETIF) {
     gnrc_netif_hdr_t *netif_hdr = pkt->data;
@@ -418,44 +409,78 @@ static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
     DEBUG("AODB TEST -------source address --> %s\n", ipv6_addr);
   }
 
-  if (udp_snip->type == GNRC_NETTYPE_IPV6) {
-    if (ipv6_addr_is_unspecified(&((ipv6_hdr_t *)udp_snip->data)->dst)) {
-      DEBUG("PROBLEMS HERE________________________________________\n");
+  if (ipv6_snip->type == GNRC_NETTYPE_IPV6) {
+    if (ipv6_addr_is_unspecified(&((ipv6_hdr_t *)ipv6_snip->data)->dst)) {
       DEBUG("ipv6: destination address is unspecified address (::), "
             "dropping packet \n");
       gnrc_pktbuf_release_error(pkt, EINVAL);
       return;
     }
     char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
-    ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)udp_snip->data)->dst,
+    ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)ipv6_snip->data)->dst,
                      IPV6_ADDR_MAX_STR_LEN);
     DEBUG("AODB TEST -------target address --> %s\n", ipv6_addr);
-
-    memset(ipv6_addr, 0, sizeof(ipv6_addr));
-    ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)udp_snip->data)->src,
-                     IPV6_ADDR_MAX_STR_LEN);
-    DEBUG("AODB TEST -------source address --> %s\n", ipv6_addr);
 
     // init multicast address: set to to a link-local all nodes multicast
     // address
     _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
     DEBUG("my multicast address is: %s\n",
           ipv6_addr_to_str(addr_str, &_v6_addr_mcast, IPV6_ADDR_MAX_STR_LEN));
-    ((ipv6_hdr_t *)udp_snip->data)->dst = _v6_addr_mcast;
+    ((ipv6_hdr_t *)ipv6_snip->data)->dst = _v6_addr_mcast;
   }
 
   tmp_pkt = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_UDP);
   if (tmp_pkt != NULL) {
-    DEBUG("DATA FROM APP LAYER IS: %s",
+    DEBUG("DATA FROM APP LAYER IS: %s\n",
           (char *)tmp_pkt->next->data);
   }
+  
+  ipv6_addr_t *addr;
+  addr = &((ipv6_hdr_t *)ipv6_snip->data)->dst;
+
+  gnrc_aodv_get_next_hop(addr);
 }
 
-ipv6_addr_t *aodv_get_next_hop(ipv6_addr_t *dest) {
+ipv6_addr_t *gnrc_aodv_get_next_hop(ipv6_addr_t *dest) {
   DEBUG("aodv_get_next_hop() %s:",
         ipv6_addr_to_str(addr_str, &_v6_addr_local, IPV6_ADDR_MAX_STR_LEN));
   DEBUG(" getting next hop for %s\n",
         ipv6_addr_to_str(addr_str, dest, IPV6_ADDR_MAX_STR_LEN));
 
+  //aodvv2_metric_t _metric_type = AODVV2_DEFAULT_METRIC_TYPE;
+  //ipv6_addr_t na_local = gnrc_get_ipv6_from_iface(ieee802154_netif->pid);
+  
+  // struct aodvv2_packet_data rreq_data = (struct aodvv2_packet_data) {
+  //       .hoplimit = AODVV2_MAX_HOPCOUNT,
+  //       .metricType = _metric_type,
+  //       .origNode = (struct node_data) {
+  //           .addr = na_local,
+  //           .metric = 0,
+  //           .seqnum = seqnum,
+  //       },
+  //       .targNode = (struct node_data) {
+  //           .addr = _tmp_dest,
+  //       },
+  //       .timestamp = (timex_t) {0,0} /* this timestamp is never used, it exists
+  //                                     * merely to make the compiler shut up */
+  //   };
+
   return 0;
+}
+
+
+ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif) {
+  ipv6_addr_t ipv6_addr;
+  int r = gnrc_netapi_get(netif->pid, NETOPT_IPV6_ADDR, 0,
+                          &ipv6_addr, sizeof(ipv6_addr));
+  if (r < 0) {
+    DEBUG("unspecified address\n");
+    return (ipv6_addr_t)IPV6_ADDR_UNSPECIFIED;
+  }
+
+  for (unsigned i = 0; i < (unsigned)(r / sizeof(ipv6_addr_t)); i++) {
+    char ipv6_address[IPV6_ADDR_MAX_STR_LEN];
+    ipv6_addr_to_str(ipv6_address, &ipv6_addr, IPV6_ADDR_MAX_STR_LEN);
+  }
+return ipv6_addr ;
 }

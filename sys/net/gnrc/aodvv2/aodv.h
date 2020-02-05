@@ -102,7 +102,7 @@ struct msg_container {
  * @param[in] packet_data  Payload of the RREQ
  */
 void gnrc_aodv_send_rreq(struct aodvv2_packet_data *packet_data);
-
+ipv6_addr_t *gnrc_aodv_get_next_hop(ipv6_addr_t *dest);
 static int udp_send(char *addr_str, char *port_str, char *data, unsigned int num,
                     unsigned int delay);
 #ifdef __cplusplus
