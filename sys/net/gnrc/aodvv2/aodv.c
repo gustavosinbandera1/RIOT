@@ -51,6 +51,7 @@
 
 #include "net/gnrc/icmpv6/error.h"
 #include "net/inet_csum.h"
+#include "utils.h"
 
 #define RCV_MSG_Q_SIZE (32)
 
@@ -64,9 +65,13 @@ static int sender_thread;
 static int _sock_snd;
 
 struct netaddr na_mcast = (struct netaddr){};
-//ipv6_addr_t ipv6_addrs = {0};
-char addr_str[IPV6_ADDR_MAX_STR_LEN];
+// struct netaddr na_mcast = (struct netaddr){};
+static struct netaddr na_local; /* the same as _v6_addr_local, but to save us
+                                 * constant calls to ipv6_addr_t_to_netaddr()... */
+
+
 static ipv6_addr_t _v6_addr_local, _v6_addr_mcast, _v6_addr_loopback;
+char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
 static void _init_sock_snd(void);
 static void *_event_loop(void *arg);
@@ -441,29 +446,48 @@ static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
   gnrc_aodv_get_next_hop(addr);
 }
 
+
+
+
+
 ipv6_addr_t *gnrc_aodv_get_next_hop(ipv6_addr_t *dest) {
   DEBUG("aodv_get_next_hop() %s:",
         ipv6_addr_to_str(addr_str, &_v6_addr_local, IPV6_ADDR_MAX_STR_LEN));
   DEBUG(" getting next hop for %s\n",
         ipv6_addr_to_str(addr_str, dest, IPV6_ADDR_MAX_STR_LEN));
 
-  //aodvv2_metric_t _metric_type = AODVV2_DEFAULT_METRIC_TYPE;
-  //ipv6_addr_t na_local = gnrc_get_ipv6_from_iface(ieee802154_netif->pid);
+
+  DEBUG("---------------------------------------------------\n");
+  DEBUG("el ID exz :%d", ieee802154_netif->pid);
+  //int pid = ieee802154_netif->pid;
+  aodvv2_metric_t _metric_type = AODVV2_DEFAULT_METRIC_TYPE;
+  ipv6_addr_t v6_addr_local = gnrc_get_ipv6_from_iface(ieee802154_netif);
+  (void)v6_addr_local;
+
+  struct netaddr na_dest;
+
+  //get network address local and network address target
+  ipv6_addr_t_to_netaddr(&v6_addr_local, &na_local);
+  ipv6_addr_t_to_netaddr(dest, &na_dest);
+
+  aodvv2_seqnum_t seqnum = seqnum_get();
+  seqnum_inc();
   
-  // struct aodvv2_packet_data rreq_data = (struct aodvv2_packet_data) {
-  //       .hoplimit = AODVV2_MAX_HOPCOUNT,
-  //       .metricType = _metric_type,
-  //       .origNode = (struct node_data) {
-  //           .addr = na_local,
-  //           .metric = 0,
-  //           .seqnum = seqnum,
-  //       },
-  //       .targNode = (struct node_data) {
-  //           .addr = _tmp_dest,
-  //       },
-  //       .timestamp = (timex_t) {0,0} /* this timestamp is never used, it exists
-  //                                     * merely to make the compiler shut up */
-  //   };
+  struct aodvv2_packet_data rreq_data = (struct aodvv2_packet_data) {
+        .hoplimit = AODVV2_MAX_HOPCOUNT,
+        .metricType = _metric_type,
+        .origNode = (struct node_data) {
+            .addr = na_local,
+            .metric = 0,
+            .seqnum = seqnum,
+        },
+        .targNode = (struct node_data) {
+            .addr = na_dest,
+        },
+        .timestamp = (timex_t) {0,0} /* this timestamp is never used, it exists
+                                      * merely to make the compiler shut up */
+  };
+  (void)rreq_data;
 
   return 0;
 }

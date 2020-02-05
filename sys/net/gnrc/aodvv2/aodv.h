@@ -34,6 +34,7 @@
 
 
 #include "constants.h"
+#include "seqnum.h"
 #include "net/gnrc/aodvv2/types.h"
 #include "thread.h"
 #include "udp.h"
