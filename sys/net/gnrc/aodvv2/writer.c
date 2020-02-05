@@ -165,19 +165,20 @@ void gnrc_aodvv2_packet_writer_init(write_packet_func_ptr ptr)
  */
 void gnrc_aodvv2_packet_writer_send_rreq(struct aodvv2_packet_data *packet_data, struct netaddr *next_hop)
 {
-    
+    (void)packet_data;
+    (void)next_hop;
 
     if ((packet_data == NULL) || (next_hop == NULL)) {
         return;
     }
 
-    /* Make sure no other thread is using the writer right now */
+    // /* Make sure no other thread is using the writer right now */
     mutex_lock(&writer_mutex);
     memcpy(&_target.packet_data, packet_data, sizeof(struct aodvv2_packet_data));
     _target.type = RFC5444_MSGTYPE_RREQ;
     _target.packet_data.hoplimit = packet_data->hoplimit;
 
-    /* set address to which the write_packet callback should send our RREQ */
+    // /* set address to which the write_packet callback should send our RREQ */
     memcpy(&_target.target_addr, next_hop, sizeof (struct netaddr));
 
     rfc5444_writer_create_message_alltarget(&writer, RFC5444_MSGTYPE_RREQ);

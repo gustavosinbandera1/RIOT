@@ -65,10 +65,9 @@ static int sender_thread;
 static int _sock_snd;
 
 struct netaddr na_mcast = (struct netaddr){};
-// struct netaddr na_mcast = (struct netaddr){};
-static struct netaddr na_local; /* the same as _v6_addr_local, but to save us
-                                 * constant calls to ipv6_addr_t_to_netaddr()... */
-
+static struct netaddr
+    na_local; /* the same as _v6_addr_local, but to save us
+               * constant calls to ipv6_addr_t_to_netaddr()... */
 
 static ipv6_addr_t _v6_addr_local, _v6_addr_mcast, _v6_addr_loopback;
 char addr_str[IPV6_ADDR_MAX_STR_LEN];
@@ -82,8 +81,9 @@ static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
                            gnrc_pktsnip_t *payload);
 static void gnrc_process_message(gnrc_pktsnip_t *pkt);
 ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif);
-
-
+static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
+                          struct rfc5444_writer_target *iface __attribute__((unused)),
+                          void *buffer, size_t length);
 
 void gnrc_aodvv2_init(void) {
   (void)_v6_addr_local;
@@ -106,13 +106,14 @@ void gnrc_aodvv2_init(void) {
                          THREAD_CREATE_STACKTEST, _event_loop, NULL, "IPV6");
   }
 
-  sender_thread =
-      thread_create(aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf),
-                    THREAD_PRIORITY_MAIN - 1, THREAD_CREATE_STACKTEST,
-                    gnrc_aodvv2_sender_thread, NULL, "gnrc_aodvv2_sender_thread");
+  sender_thread = thread_create(
+      aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf), THREAD_PRIORITY_MAIN - 1,
+      THREAD_CREATE_STACKTEST, gnrc_aodvv2_sender_thread, NULL,
+      "gnrc_aodvv2_sender_thread");
   _init_sock_snd();
-}
 
+  gnrc_aodvv2_packet_writer_init(_write_packet);
+}
 
 static void *_event_loop(void *arg) {
   (void)arg;
@@ -173,6 +174,7 @@ void gnrc_aodv_send_rreq(struct aodvv2_packet_data *packet_data) {
   };
 
   struct msg_container *mc = malloc(sizeof(struct msg_container));
+
   *mc = (struct msg_container){.type = RFC5444_MSGTYPE_RREQ, .data = rd};
 
   msg_t msg;
@@ -188,18 +190,31 @@ static void *gnrc_aodvv2_sender_thread(void *arg) {
 
   msg_t msgq[RCV_MSG_Q_SIZE];
   msg_init_queue(msgq, sizeof msgq);
+  DEBUG("===================================================\n");
+  DEBUG("===================================================\n");
+  DEBUG("===================================================\n");
+  DEBUG("===================================================\n");
   DEBUG("gnrc_aodvv2_sender_thread initialized.\n");
 
   while (true) {
     DEBUG("%s()\n", __func__);
     msg_t msg;
     msg_receive(&msg);
+    DEBUG("***************************************\n");
+    DEBUG("***************************************\n");
+    DEBUG("***************************************\n");
+    DEBUG("***************************************\n");
     DEBUG("AODV SENDER THREAD--------->>>>\n");
     struct msg_container *mc = (struct msg_container *)msg.content.ptr;
 
     if (mc->type == RFC5444_MSGTYPE_RREQ) {
+      DEBUG("++++++++++++++++++++++++++++++++++++++\n");
+      DEBUG("++++++++++++++++++++++++++++++++++++++\n");
+      DEBUG("++++++++++++++++++++++++++++++++++++++\n");
+      DEBUG("++++++++++++++++++++++++++++++++++++++\n");
       struct rreq_rrep_data *rreq_data = (struct rreq_rrep_data *)mc->data;
-      gnrc_aodvv2_packet_writer_send_rreq(rreq_data->packet_data, rreq_data->next_hop);
+      gnrc_aodvv2_packet_writer_send_rreq(rreq_data->packet_data,
+                                          rreq_data->next_hop);
     } else {
       DEBUG("ERROR: Couldn't identify Message\n");
     }
@@ -436,19 +451,14 @@ static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
 
   tmp_pkt = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_UDP);
   if (tmp_pkt != NULL) {
-    DEBUG("DATA FROM APP LAYER IS: %s\n",
-          (char *)tmp_pkt->next->data);
+    DEBUG("DATA FROM APP LAYER IS: %s\n", (char *)tmp_pkt->next->data);
   }
-  
+
   ipv6_addr_t *addr;
   addr = &((ipv6_hdr_t *)ipv6_snip->data)->dst;
 
   gnrc_aodv_get_next_hop(addr);
 }
-
-
-
-
 
 ipv6_addr_t *gnrc_aodv_get_next_hop(ipv6_addr_t *dest) {
   DEBUG("aodv_get_next_hop() %s:",
@@ -456,47 +466,49 @@ ipv6_addr_t *gnrc_aodv_get_next_hop(ipv6_addr_t *dest) {
   DEBUG(" getting next hop for %s\n",
         ipv6_addr_to_str(addr_str, dest, IPV6_ADDR_MAX_STR_LEN));
 
-
   DEBUG("---------------------------------------------------\n");
   DEBUG("el ID exz :%d", ieee802154_netif->pid);
-  //int pid = ieee802154_netif->pid;
+  // int pid = ieee802154_netif->pid;
   aodvv2_metric_t _metric_type = AODVV2_DEFAULT_METRIC_TYPE;
   ipv6_addr_t v6_addr_local = gnrc_get_ipv6_from_iface(ieee802154_netif);
   (void)v6_addr_local;
 
   struct netaddr na_dest;
 
-  //get network address local and network address target
+  // get network address local and network address target
   ipv6_addr_t_to_netaddr(&v6_addr_local, &na_local);
   ipv6_addr_t_to_netaddr(dest, &na_dest);
+  ipv6_addr_t_to_netaddr(&_v6_addr_mcast, &na_mcast);
 
   aodvv2_seqnum_t seqnum = seqnum_get();
   seqnum_inc();
-  
-  struct aodvv2_packet_data rreq_data = (struct aodvv2_packet_data) {
-        .hoplimit = AODVV2_MAX_HOPCOUNT,
-        .metricType = _metric_type,
-        .origNode = (struct node_data) {
-            .addr = na_local,
-            .metric = 0,
-            .seqnum = seqnum,
-        },
-        .targNode = (struct node_data) {
-            .addr = na_dest,
-        },
-        .timestamp = (timex_t) {0,0} /* this timestamp is never used, it exists
-                                      * merely to make the compiler shut up */
+
+  struct aodvv2_packet_data rreq_data = (struct aodvv2_packet_data){
+      .hoplimit = AODVV2_MAX_HOPCOUNT,
+      .metricType = _metric_type,
+      .origNode =
+          (struct node_data){
+              .addr = na_local,
+              .metric = 0,
+              .seqnum = seqnum,
+          },
+      .targNode =
+          (struct node_data){
+              .addr = na_dest,
+          },
+      .timestamp = (timex_t){0, 0} /* this timestamp is never used, it exists
+                                    * merely to make the compiler shut up */
   };
   (void)rreq_data;
+  gnrc_aodv_send_rreq(&rreq_data);
 
   return 0;
 }
 
-
 ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif) {
   ipv6_addr_t ipv6_addr;
-  int r = gnrc_netapi_get(netif->pid, NETOPT_IPV6_ADDR, 0,
-                          &ipv6_addr, sizeof(ipv6_addr));
+  int r = gnrc_netapi_get(netif->pid, NETOPT_IPV6_ADDR, 0, &ipv6_addr,
+                          sizeof(ipv6_addr));
   if (r < 0) {
     DEBUG("unspecified address\n");
     return (ipv6_addr_t)IPV6_ADDR_UNSPECIFIED;
@@ -506,5 +518,25 @@ ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif) {
     char ipv6_address[IPV6_ADDR_MAX_STR_LEN];
     ipv6_addr_to_str(ipv6_address, &ipv6_addr, IPV6_ADDR_MAX_STR_LEN);
   }
-return ipv6_addr ;
+  return ipv6_addr;
+}
+
+
+/**
+ * Handle the output of the RFC5444 packet creation process. This callback is
+ * called by every writer_send_* function.
+ */
+static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
+                          struct rfc5444_writer_target *iface __attribute__((unused)),
+                          void *buffer, size_t length)
+{
+  (void)buffer;
+  (void)length;
+
+  DEBUG("*******************************************\n");
+  DEBUG("*******************************************\n");
+  DEBUG("*******************************************\n");
+  DEBUG("*******************************************\n");
+  DEBUG("GOING TO WRITE THE PACKETY\n");
+
 }
