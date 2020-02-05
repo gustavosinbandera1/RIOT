@@ -390,22 +390,80 @@ static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
 }
 
 static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
-  //udp_hdr_t *hdr;
-  gnrc_pktsnip_t *udp_snip, *tmp;
-  //gnrc_nettype_t target_type = pkt->type;
+  // udp_hdr_t *hdr;
+  gnrc_pktsnip_t *udp_snip, *tmp_pkt;
+  // ipv6_hdr_t *ipv6_hdr;
+  // gnrc_nettype_t target_type = pkt->type;
+
+  gnrc_netif_t *netif = NULL;
 
   DEBUG("AODV---- _send(packet)\n");
   /* write protect first header */
-  tmp = gnrc_pktbuf_start_write(pkt);
-  if (tmp == NULL) {
+  tmp_pkt = gnrc_pktbuf_start_write(pkt);
+  if (tmp_pkt == NULL) {
     DEBUG("AODV: cannot send packet: unable to allocate packet\n");
     gnrc_pktbuf_release(pkt);
     return;
   }
-  pkt = tmp;
-  udp_snip = tmp->next;
+  pkt = tmp_pkt;
+  udp_snip = tmp_pkt->next;
+  (void)udp_snip;
 
-  /* get and write protect until udp snip */
+  DEBUG("debugeando: %d\n", (int)pkt->type);
+  if (pkt->type == GNRC_NETTYPE_NETIF) {
+    gnrc_netif_hdr_t *netif_hdr = pkt->data;
+    DEBUG("------------------PRINT HEADERS NETIF");
+    gnrc_netif_hdr_print(netif_hdr);
+    netif = gnrc_netif_hdr_get_netif(pkt->data);
+    (void)netif;
+    (void)netif_hdr;
+
+    char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
+    ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)pkt->data)->dst,
+                     IPV6_ADDR_MAX_STR_LEN);
+    DEBUG("AODB TEST -------target address --> %s\n", ipv6_addr);
+
+    memset(ipv6_addr, 0, sizeof(ipv6_addr));
+    ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)pkt->data)->src,
+                     IPV6_ADDR_MAX_STR_LEN);
+    DEBUG("AODB TEST -------source address --> %s\n", ipv6_addr);
+  }
+
+  DEBUG("++++++++++++++++++++++++++++++++++++++++++++++++\n");
+  DEBUG("el tipo es este: %d", pkt->next->type);
+
+  if (udp_snip->type == GNRC_NETTYPE_IPV6) {
+    DEBUG("LA DATA COINSIDE ESTA VEZ>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
+    // ipv6_hdr_t *ipv6_hdr;
+
+    if (ipv6_addr_is_unspecified(&((ipv6_hdr_t *)udp_snip->data)->dst)) {
+      DEBUG("PROBLEMS HERE________________________________________\n");
+      DEBUG("ipv6: destination address is unspecified address (::), "
+            "dropping packet \n");
+      gnrc_pktbuf_release_error(pkt, EINVAL);
+      return;
+    } else {
+      DEBUG("++++++++ALL WAS OK!!!!!!!!!!!!!!!!!!!!!!!");
+      char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
+      ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)udp_snip->data)->dst,
+                       IPV6_ADDR_MAX_STR_LEN);
+      DEBUG("AODB TEST -------target address --> %s\n", ipv6_addr);
+
+      memset(ipv6_addr, 0, sizeof(ipv6_addr));
+      ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)udp_snip->data)->src,
+                       IPV6_ADDR_MAX_STR_LEN);
+      DEBUG("AODB TEST -------source address --> %s\n", ipv6_addr);
+
+      // init multicast address: set to to a link-local all nodes multicast
+      // address
+      _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
+      DEBUG("my multicast address is: %s\n",
+      ipv6_addr_to_str(addr_str, &_v6_addr_mcast, IPV6_ADDR_MAX_STR_LEN));
+       ((ipv6_hdr_t *)udp_snip->data)->dst = _v6_addr_mcast;
+    }
+  }
+
+  // /* get and write protect until udp snip */
   while ((udp_snip != NULL) && (udp_snip->type != GNRC_NETTYPE_UDP)) {
     udp_snip = gnrc_pktbuf_start_write(udp_snip);
     if (udp_snip == NULL) {
@@ -413,12 +471,12 @@ static void gnrc_process_message(gnrc_pktsnip_t *pkt) {
       gnrc_pktbuf_release(pkt);
       return;
     }
-    tmp->next = udp_snip;
-    tmp = udp_snip;
+    tmp_pkt->next = udp_snip;
+    tmp_pkt = udp_snip;
     udp_snip = udp_snip->next;
   }
-  DEBUG("************************************************************\n");
-  DEBUG("la data es %s\n", (char*)udp_snip->next->data);
+  DEBUG("la data es %s\n", (char *)udp_snip->next->data);
+  DEBUG("el tipo es : %d\n", udp_snip->next->type);
 }
 
 ipv6_addr_t *aodv_get_next_hop(ipv6_addr_t *dest) {
@@ -427,90 +485,5 @@ ipv6_addr_t *aodv_get_next_hop(ipv6_addr_t *dest) {
   DEBUG(" getting next hop for %s\n",
         ipv6_addr_to_str(addr_str, dest, IPV6_ADDR_MAX_STR_LEN));
 
-  // struct netaddr _tmp_dest;
-  // ipv6_addr_t_to_netaddr(dest, &_tmp_dest);
-  // timex_t now;
-  // struct unreachable_node unreachable_nodes[AODVV2_MAX_UNREACHABLE_NODES];
-  // size_t len;
-
-  // /* The network stack sometimes asks us for the next hop towards our own IP
-  // */ if (memcmp(dest, &_v6_addr_local, sizeof(ipv6_addr_t)) == 0) {
-  //     AODV_DEBUG("That's me, returning loopback\n");
-  //     return &_v6_addr_loopback;
-  // }
-
-  // /*
-  //  * TODO use ndp_neighbor_get_ll_address() as soon as it's available.
-  //  * note: delete check for active/stale/delayed entries, get_ll_address
-  //  * does that for us then
-  // */
-  // ndp_neighbor_cache_t *ndp_nc_entry = ndp_neighbor_cache_search(dest);
-  // struct aodvv2_routing_entry_t *rt_entry =
-  // routingtable_get_entry(&_tmp_dest, _metric_type);
-
-  // if (ndp_nc_entry != NULL) {
-  //     /* Case 2: Broken Link (detected by lower layer) */
-  //     int link_broken = (ndp_nc_entry->state == NDP_NCE_STATUS_INCOMPLETE ||
-  //                        ndp_nc_entry->state == NDP_NCE_STATUS_PROBE) &&
-  //                       (rt_entry != NULL && rt_entry->state !=
-  //                       ROUTE_STATE_BROKEN);
-
-  //     if (link_broken) {
-  //         DEBUG("\tNeighbor Cache entry found, but invalid (state: %i).
-  //         Sending RERR.\n",
-  //               ndp_nc_entry->state);
-
-  //         /* mark all routes (active, idle, expired) that use next_hop as
-  //         broken
-  //          * and add all *Active* routes to the list of unreachable nodes */
-  //         routingtable_break_and_get_all_hopping_over(&_tmp_dest,
-  //         unreachable_nodes, &len);
-
-  //         aodv_send_rerr(unreachable_nodes, len, &na_mcast);
-  //         return NULL;
-  //     }
-
-  //     DEBUG("[aodvv2][ndp] found NC entry. Returning dest addr.\n");
-  //     return dest;
-  // }
-  // DEBUG("\t[ndp] no entry for addr %s found\n",
-  //       ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, dest));
-
-  // if (rt_entry) {
-  //     /* Case 1: Undeliverable Packet */
-  //     int packet_indeliverable = rt_entry->state == ROUTE_STATE_BROKEN ||
-  //                                rt_entry->state == ROUTE_STATE_EXPIRED;
-  //     if (packet_indeliverable) {
-  //         DEBUG("\tRouting table entry found, but invalid (state %i). Sending
-  //         RERR.\n",
-  //               rt_entry->state);
-  //         unreachable_nodes[0].addr = _tmp_dest;
-  //         unreachable_nodes[0].seqnum = rt_entry->seqnum;
-  //         aodv_send_rerr(unreachable_nodes, 1, &na_mcast);
-  //         return NULL;
-  //     }
-
-  //     DEBUG("\tfound dest %s in routing table\n",
-  //           ipv6_addr_to_str(addr_str, IPV6_MAX_ADDR_STR_LEN, dest));
-
-  //     vtimer_now(&now);
-  //     rt_entry->lastUsed = now;
-  //     if (rt_entry->state == ROUTE_STATE_IDLE) {
-  //         rt_entry->state = ROUTE_STATE_ACTIVE;
-  //     }
-
-  //     /* Currently, there is no way to do this, so I'm doing it the worst
-  //      * possible, but safe way: I can't make sure that the current call to
-  //      * aodv_get_next_hop() is overridden by another call to
-  //      aodv_get_next_hop()
-  //      * by a thread with higher priority, thus messing up return values if I
-  //      just
-  //      * use a static ipv6_addr_t.
-  //      * The following malloc will never be free()'d. TODO: FIX THIS ASAP.
-  //     */
-  //     ipv6_addr_t *next_hop = (ipv6_addr_t *) malloc(sizeof(ipv6_addr_t));
-  //     netaddr_to_ipv6_addr_t(&rt_entry->nextHopAddr, next_hop);
-
-  // return next_hop;
   return 0;
 }
