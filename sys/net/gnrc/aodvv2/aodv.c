@@ -100,7 +100,6 @@ void gnrc_aodvv2_init(void) {
   if (ieee802154_netif != NULL) {
     DEBUG("interface: %d\n", ieee802154_netif->pid);
   }
-
   gnrc_get_ipv6_from_iface(ieee802154_netif);
 
   if (_pid == KERNEL_PID_UNDEF) {
@@ -113,8 +112,8 @@ void gnrc_aodvv2_init(void) {
       aodv_snd_stack_buf, sizeof(aodv_snd_stack_buf), THREAD_PRIORITY_MAIN - 1,
       THREAD_CREATE_STACKTEST, gnrc_aodvv2_sender_thread, NULL,
       "gnrc_aodvv2_sender_thread");
-  _init_sock_snd();
 
+  _init_sock_snd();
   gnrc_aodvv2_packet_writer_init(_write_packet);
 }
 
@@ -136,6 +135,7 @@ static void *_event_loop(void *arg) {
     msg_receive(&msg);
     switch (msg.type) {
     case GNRC_NETAPI_MSG_TYPE_RCV:
+      DEBUG("*****AODV**** CAPTURING MESSAGE FROM REMOTE CLIENT \n");
       _receive(msg.content.ptr);
       break;
     case GNRC_NETAPI_MSG_TYPE_SND:
@@ -305,17 +305,43 @@ static void _receive(gnrc_pktsnip_t *pkt) {
   ipv6 = gnrc_pktsnip_search_type(pkt, GNRC_NETTYPE_IPV6);
 
   assert(ipv6 != NULL);
+  if(pkt->next != NULL) {
+      DEBUG("////////PKT->NEXT ES DIFERENTE DE NULL/////////////////////////////////////////////////////\n");
+  }
 
-  if ((pkt->next != NULL) && (pkt->next->type == GNRC_NETTYPE_UDP) &&
-      (pkt->next->size == sizeof(udp_hdr_t))) {
-    /* UDP header was already marked. Take it. */
-    udp = pkt->next;
+  if(pkt->type == GNRC_NETTYPE_UDP) {
+    DEBUG("/////////nettype igual a UDP////////////////////////////////////////////////////\n");
+    DEBUG("EL TAMANO DEL PAQUETE ES %s", (char*)pkt->data);
   } else {
+    DEBUG("EL TIPO ES %d", pkt->type);
+  }
+
+  if(pkt != NULL) {
+      DEBUG("////////////////ES DIFERENTE DE NULL/////////////////////////////////////////////\n");
+  }
+
+    DEBUG("//////////////////////////////////////////////PACKET SIZE/%d//////////////\n",pkt->size);
+ DEBUG("//////////////////////////////////////////////PACKET SIZE/%d//////////////\n",sizeof(udp_hdr_t));
+  if ((pkt != NULL) && (pkt->type == GNRC_NETTYPE_UDP) /* &&
+      (pkt->size == sizeof(udp_hdr_t)) */) {
+    /* UDP header was already marked. Take it. */
+    udp = pkt;
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+    DEBUG("/////////////////////////////////////////////////////////////\n");
+  } else {
+     DEBUG("////////////////ENTRAMOS AQUI/////////////////////////////////////////////\n");
     udp = gnrc_pktbuf_mark(pkt, sizeof(udp_hdr_t), GNRC_NETTYPE_UDP);
     if (udp == NULL) {
       DEBUG("udp: error marking UDP header, dropping packet\n");
       gnrc_pktbuf_release(pkt);
       return;
+    } else {
+      DEBUG("/////////////TODO SALIO COMO SE QUERIA////////////////////////////////////////////////\n");
     }
   }
   /* mark payload as Type: UNDEF */
