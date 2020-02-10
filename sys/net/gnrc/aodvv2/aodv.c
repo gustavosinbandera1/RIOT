@@ -548,7 +548,7 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__((unused)),
   DEBUG("GOING TO WRITE THE PACKETY\n");
 
   gnrc_pktsnip_t *ipv6_snip, *udp_snip, *tmp_pkt;
-  gnrc_netif_t *netif = NULL;
+  //gnrc_netif_t *netif = NULL;
 
   gnrc_pktsnip_t *temp_packet = *pkt_temp;
 
