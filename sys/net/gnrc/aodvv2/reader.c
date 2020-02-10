@@ -1,20 +1,22 @@
 /*
+                    
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
+ * Copyright (C) 2020 Locha Inc
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
  * directory for more details.
  */
-
 /**
+                    
  * @ingroup     aodvv2
- * @{
  *
- * @file        reader.c
- * @brief       reading and handling of RFC5444 aodvv2 messages
+ * @file        aodv.c|
+ * @brief       aodvv2 routing protocol
  *
  * @author      Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
+ * @author Gustavo Grisales <gustavosinbandera1@hotmail.com>
  */
 
 #ifdef RIOT

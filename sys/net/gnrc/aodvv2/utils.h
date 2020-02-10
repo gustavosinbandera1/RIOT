@@ -1,33 +1,23 @@
-/**
- * @file main.c
- * @author Locha Mesh Developers (contact@locha.io)
- * @brief Main firmware file
- * @version 0.1
- * @date 2020-02-02
- * 
- * @copyright Copyright (c) 2020 Locha Mesh project developers
- * @license Apache 2.0, see LICENSE file for details
- * 
- */
 /*
+                    
  * Copyright (C) 2014 Freie Universität Berlin
  * Copyright (C) 2014 Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
+ * Copyright (C) 2020 Locha Inc
  *
  * This file is subject to the terms and conditions of the GNU Lesser
  * General Public License v2.1. See the file LICENSE in the top level
  * directory for more details.
  */
-
 /**
+                    
  * @ingroup     aodvv2
- * @{
  *
- * @file        utils.h
- * @brief       client- and RREQ-table, ipv6 address representation converters
+ * @file        aodv.c|
+ * @brief       aodvv2 routing protocol
  *
  * @author      Lotte Steenbrink <lotte.steenbrink@fu-berlin.de>
+ * @author Gustavo Grisales <gustavosinbandera1@hotmail.com>
  */
-
 #ifndef AODVV2_UTILS_H_
 #define AODVV2_UTILS_H_
 
