@@ -72,6 +72,8 @@ static struct netaddr
 static ipv6_addr_t _v6_addr_local, _v6_addr_mcast, _v6_addr_loopback;
 char addr_str[IPV6_ADDR_MAX_STR_LEN];
 
+gnrc_pktsnip_t **pkt_temp;
+
 static void _init_sock_snd(void);
 static void *_event_loop(void *arg);
 static void *gnrc_aodvv2_sender_thread(void *arg);
@@ -81,8 +83,9 @@ static uint16_t _calc_csum(gnrc_pktsnip_t *hdr, gnrc_pktsnip_t *pseudo_hdr,
                            gnrc_pktsnip_t *payload);
 static void gnrc_process_message(gnrc_pktsnip_t *pkt);
 ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif);
-static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
-                          struct rfc5444_writer_target *iface __attribute__((unused)),
+static void _write_packet(struct rfc5444_writer *wr __attribute__((unused)),
+                          struct rfc5444_writer_target *iface
+                          __attribute__((unused)),
                           void *buffer, size_t length);
 
 void gnrc_aodvv2_init(void) {
@@ -138,8 +141,13 @@ static void *_event_loop(void *arg) {
     case GNRC_NETAPI_MSG_TYPE_SND:
       DEBUG("*****AODV**** CAPTURING MESSAGE FROM APPLICATION");
       //  aodv_get_next_hop();
+      pkt_temp = (gnrc_pktsnip_t **)&msg.content.ptr;
       gnrc_process_message(msg.content.ptr);
-      _send(msg.content.ptr);
+
+      msg.content.ptr = *pkt_temp;
+      //_send(msg.content.ptr);
+      // _send(*pkt_temp);
+
       break;
     case GNRC_NETAPI_MSG_TYPE_SET:
     case GNRC_NETAPI_MSG_TYPE_GET:
@@ -215,6 +223,7 @@ static void *gnrc_aodvv2_sender_thread(void *arg) {
       struct rreq_rrep_data *rreq_data = (struct rreq_rrep_data *)mc->data;
       gnrc_aodvv2_packet_writer_send_rreq(rreq_data->packet_data,
                                           rreq_data->next_hop);
+
     } else {
       DEBUG("ERROR: Couldn't identify Message\n");
     }
@@ -521,15 +530,14 @@ ipv6_addr_t gnrc_get_ipv6_from_iface(gnrc_netif_t *netif) {
   return ipv6_addr;
 }
 
-
 /**
  * Handle the output of the RFC5444 packet creation process. This callback is
  * called by every writer_send_* function.
  */
-static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
-                          struct rfc5444_writer_target *iface __attribute__((unused)),
-                          void *buffer, size_t length)
-{
+static void _write_packet(struct rfc5444_writer *wr __attribute__((unused)),
+                          struct rfc5444_writer_target *iface
+                          __attribute__((unused)),
+                          void *buffer, size_t length) {
   (void)buffer;
   (void)length;
 
@@ -538,5 +546,73 @@ static void _write_packet(struct rfc5444_writer *wr __attribute__ ((unused)),
   DEBUG("*******************************************\n");
   DEBUG("*******************************************\n");
   DEBUG("GOING TO WRITE THE PACKETY\n");
+
+  gnrc_pktsnip_t *ipv6_snip, *udp_snip, *tmp_pkt;
+  gnrc_netif_t *netif = NULL;
+
+  gnrc_pktsnip_t *temp_packet = *pkt_temp;
+
+  DEBUG("AODV---- porcessing packet\n");
+  /* write protect first header */
+  tmp_pkt = gnrc_pktbuf_start_write(temp_packet);
+  if (tmp_pkt == NULL) {
+    DEBUG("AODV: cannot send packet: unable to allocate packet\n");
+    gnrc_pktbuf_release(temp_packet);
+    // return;
+  }
+  temp_packet = tmp_pkt;
+  ipv6_snip = tmp_pkt->next;
+  udp_snip = ipv6_snip->next;
+  (void)ipv6_snip;
+  (void)udp_snip;
+  DEBUG("debugeando: %d\n", (int)temp_packet->type);
+
+
+  tmp_pkt = gnrc_pktsnip_search_type(temp_packet, GNRC_NETTYPE_UDP);
+  if (tmp_pkt != NULL) {
+    DEBUG("DATA FROM APP LAYER IS: %s\n", (char *)tmp_pkt->next->data);
+  }
+
+  tmp_pkt->next->data = buffer;
+  _send(temp_packet);
+
+  // if (temp_packet->type == GNRC_NETTYPE_NETIF) {
+  //   gnrc_netif_hdr_t *netif_hdr = temp_packet->data;
+  //   gnrc_netif_hdr_print(netif_hdr);
+  //   netif = gnrc_netif_hdr_get_netif(temp_packet->data);
+  //   (void)netif;
+  //   (void)netif_hdr;
+
+  //   char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
+  //   ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)temp_packet->data)->dst,
+  //                    IPV6_ADDR_MAX_STR_LEN);
+  //   DEBUG("AODB TEST -------target address --> %s\n", ipv6_addr);
+
+  //   memset(ipv6_addr, 0, sizeof(ipv6_addr));
+  //   ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)temp_packet->data)->src,
+  //                    IPV6_ADDR_MAX_STR_LEN);
+  //   DEBUG("AODB TEST -------source address --> %s\n", ipv6_addr);
+  // }
+
+  // if (ipv6_snip->type == GNRC_NETTYPE_IPV6) {
+  //   if (ipv6_addr_is_unspecified(&((ipv6_hdr_t *)ipv6_snip->data)->dst)) {
+  //     DEBUG("ipv6: destination address is unspecified address (::), "
+  //           "dropping packet \n");
+  //     gnrc_pktbuf_release_error(temp_packet, EINVAL);
+  //     // return;
+  //   }
+  //   char ipv6_addr[IPV6_ADDR_MAX_STR_LEN];
+  //   ipv6_addr_to_str(ipv6_addr, &((ipv6_hdr_t *)ipv6_snip->data)->dst,
+  //                    IPV6_ADDR_MAX_STR_LEN);
+  //   DEBUG("AODB TEST -------target address --> %s\n", ipv6_addr);
+
+  //   // init multicast address: set to to a link-local all nodes multicast
+  //   // address
+  //   _v6_addr_mcast = ipv6_addr_all_nodes_link_local;
+  //   DEBUG("my multicast address is: %s\n",
+  //         ipv6_addr_to_str(addr_str, &_v6_addr_mcast, IPV6_ADDR_MAX_STR_LEN));
+  //   ((ipv6_hdr_t *)ipv6_snip->data)->dst = _v6_addr_mcast;
+  // }
+
 
 }
